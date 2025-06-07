@@ -2,26 +2,8 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Key, ExternalLink, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Key, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useSearchConsole } from '../hooks/useSearchConsole';
-
-declare global {
-  interface Window {
-    google: {
-      accounts: {
-        oauth2: {
-          initTokenClient: (config: {
-            client_id: string;
-            scope: string;
-            callback: (response: { access_token: string }) => void;
-          }) => {
-            requestAccessToken: () => void;
-          };
-        };
-      };
-    };
-  }
-}
 
 interface ApiKeySetupProps {
   onApiKeySubmit: (accessToken: string) => void;
@@ -39,6 +21,9 @@ export const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySubmit }) => {
     clearError();
     
     try {
+      if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+        throw new Error('Google OAuth client not loaded.');
+      }
       const client = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,

@@ -51,7 +51,7 @@ export interface UseSearchConsoleReturn {
   loadingSites: Set<string>;
   validateApiKey: (apiKey: string) => Promise<boolean>;
   loadSites: () => Promise<void>;
-  loadWebsiteMetrics: (siteUrl: string, country?: string, customDateRange?: { startDate: Date; endDate: Date }) => Promise<void>;
+  loadWebsiteMetrics: (siteUrl: string, country?: string) => Promise<void>;
   loadOverallAnalytics: (customDateRange?: { startDate: Date; endDate: Date }) => Promise<void>;
   setSelectedCountry: (country: string | null) => void;
   setDateRange: (dateRange: { startDate: Date; endDate: Date }) => void;
@@ -141,7 +141,7 @@ export const useSearchConsole = (apiKey?: string): UseSearchConsoleReturn => {
   const [websiteMetrics, setWebsiteMetrics] = useState<WebsiteMetrics[]>([]);
   const [overallAnalytics, setOverallAnalytics] = useState<OverallAnalytics | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  const [loadingSites, setLoadingSites] = useState<Set<string>>(new Set());
+  const [loadingSites] = useState<Set<string>>(new Set());
   const [api, setApi] = useState<SearchConsoleApi | null>(null);
   const [dateRange, setDateRange] = useState(() => {
     const endDate = new Date();
@@ -243,15 +243,14 @@ export const useSearchConsole = (apiKey?: string): UseSearchConsoleReturn => {
     }
   }, [api, handleError]);
 
-  const loadWebsiteMetrics = useCallback(async (siteUrl: string, country?: string, customDateRange?: { startDate: Date; endDate: Date }) => {
+  const loadWebsiteMetrics = useCallback(async (siteUrl: string, country?: string) => {
     if (!api) return;
     
     setIsLoading(true);
     setError(null);
     
     try {
-      const dateParams = customDateRange || dateRange;
-      const metrics = await api.getSiteMetricsWithDates(siteUrl, dateParams.startDate, dateParams.endDate, country);
+      const metrics = await api.getSiteMetrics(siteUrl, 28, selectedCountry || undefined);
       const { trend, change } = calculateTrend(metrics.dailyData);
       
       const websiteMetric: WebsiteMetrics = {
@@ -277,7 +276,7 @@ export const useSearchConsole = (apiKey?: string): UseSearchConsoleReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [api, handleError, dateRange]);
+  }, [api, handleError, selectedCountry]);
 
   const loadOverallAnalytics = useCallback(async (customDateRange?: { startDate: Date; endDate: Date }) => {
     if (!api || sites.length === 0) return;
