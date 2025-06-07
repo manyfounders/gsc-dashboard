@@ -1,0 +1,68 @@
+[build]
+  # Команда для сборки приложения
+  command = "npm run build"
+  
+  # Папка с готовыми файлами для развертывания
+  publish = "dist"
+  
+  # Переменные окружения для сборки
+  [build.environment]
+    NODE_VERSION = "18"
+    NPM_VERSION = "9"
+
+# Правила переадресации для SPA (Single Page Application)
+[[redirects]]
+  # Все запросы перенаправляем на index.html для корректной работы React Router
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Настройки заголовков для безопасности и производительности
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Безопасность
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+    # Кэширование статических ресурсов
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "*.html"
+  [headers.values]
+    # HTML файлы не кэшируем долго
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    # JavaScript файлы кэшируем на год
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    # CSS файлы кэшируем на год
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Настройки для лучшей производительности
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  bundle = true
+  minify = true
+
+[build.processing.html]
+  pretty_urls = true
+
+# Функции Netlify (если нужны)
+[functions]
+  directory = "netlify/functions" 

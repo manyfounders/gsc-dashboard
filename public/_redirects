@@ -1,0 +1,15 @@
+# Переадресация для Single Page Application
+# Все запросы перенаправляются на index.html для корректной работы React Router
+/*    /index.html   200
+
+# API запросы к Google Search Console (если используется прокси)
+/api/*  https://www.googleapis.com/webmasters/v3/:splat  200
+
+# Специальные файлы и ресурсы не перенаправляем
+/*.js   /public/:splat  200
+/*.css  /public/:splat  200
+/*.png  /public/:splat  200
+/*.jpg  /public/:splat  200
+/*.svg  /public/:splat  200
+/*.ico  /public/:splat  200
+/*.json /public/:splat  200 
