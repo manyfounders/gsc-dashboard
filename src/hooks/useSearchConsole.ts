@@ -51,8 +51,8 @@ export interface UseSearchConsoleReturn {
   loadingSites: Set<string>;
   validateApiKey: (apiKey: string) => Promise<boolean>;
   loadSites: () => Promise<void>;
-  loadWebsiteMetrics: (siteUrl: string, country?: string) => Promise<void>;
-  loadOverallAnalytics: (customDateRange?: { startDate: Date; endDate: Date }) => Promise<void>;
+  loadWebsiteMetrics: (siteUrl: string) => Promise<void>;
+  loadOverallAnalytics: () => Promise<void>;
   setSelectedCountry: (country: string | null) => void;
   setDateRange: (dateRange: { startDate: Date; endDate: Date }) => void;
   refreshData: () => Promise<void>;
@@ -243,7 +243,7 @@ export const useSearchConsole = (apiKey?: string): UseSearchConsoleReturn => {
     }
   }, [api, handleError]);
 
-  const loadWebsiteMetrics = useCallback(async (siteUrl: string, country?: string) => {
+  const loadWebsiteMetrics = useCallback(async (siteUrl: string) => {
     if (!api) return;
     
     setIsLoading(true);
@@ -278,7 +278,7 @@ export const useSearchConsole = (apiKey?: string): UseSearchConsoleReturn => {
     }
   }, [api, handleError, selectedCountry]);
 
-  const loadOverallAnalytics = useCallback(async (customDateRange?: { startDate: Date; endDate: Date }) => {
+  const loadOverallAnalytics = useCallback(async () => {
     if (!api || sites.length === 0) return;
     
     setIsLoading(true);

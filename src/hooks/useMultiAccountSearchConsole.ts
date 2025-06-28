@@ -63,8 +63,8 @@ export interface UseMultiAccountSearchConsoleReturn {
   loadingSites: Set<string>;
   validateApiKey: (apiKey: string) => Promise<boolean>;
   loadSites: () => Promise<void>;
-  loadWebsiteMetrics: (siteUrl: string, country?: string, customDateRange?: { startDate: Date; endDate: Date }) => Promise<void>;
-  loadOverallAnalytics: (customDateRange?: { startDate: Date; endDate: Date }) => Promise<void>;
+  loadWebsiteMetrics: (siteUrl: string, country?: string) => Promise<void>;
+  loadOverallAnalytics: () => Promise<void>;
   setSelectedCountry: (country: string | null) => void;
   setDateRange: (dateRange: { startDate: Date; endDate: Date }) => void;
   refreshData: () => Promise<void>;
@@ -345,7 +345,7 @@ export const useMultiAccountSearchConsole = (connectedAccounts: ConnectedAccount
     }
   }, [apis, handleError, selectedCountry]);
 
-  const loadWebsiteMetrics = useCallback(async (siteUrl: string, country?: string, customDateRange?: { startDate: Date; endDate: Date }) => {
+  const loadWebsiteMetrics = useCallback(async (siteUrl: string, country?: string) => {
     if (apis.size === 0) return;
     
     // Найдем API для этого сайта
@@ -359,7 +359,7 @@ export const useMultiAccountSearchConsole = (connectedAccounts: ConnectedAccount
     setError(null);
     
     try {
-      const dateParams = customDateRange || dateRange;
+      const dateParams = dateRange;
 
       const metrics = await api.getSiteMetricsWithDates(siteUrl, dateParams.startDate, dateParams.endDate, country);
       const { trend, change } = calculateTrend(metrics.dailyData);
@@ -390,7 +390,7 @@ export const useMultiAccountSearchConsole = (connectedAccounts: ConnectedAccount
     }
   }, [apis, sites, handleError, dateRange]);
 
-  const loadOverallAnalytics = useCallback(async (customDateRange?: { startDate: Date; endDate: Date }) => {
+  const loadOverallAnalytics = useCallback(async () => {
     if (apis.size === 0 || sites.length === 0) return;
     
     setIsLoading(true);

@@ -140,22 +140,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
   }>>([{ email: 'primary', apiKey, displayName: 'Primary Account' }]);
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
   const [isAddingAccount, setIsAddingAccount] = useState(false);
-  const { 
-    isLoading, 
-    error, 
-    sites, 
-    websiteMetrics, 
+  const {
+    isLoading,
+    error,
+    sites,
+    websiteMetrics,
     overallAnalytics,
     selectedCountry,
     dateRange,
     loadingSites,
-    loadSites, 
-    loadWebsiteMetrics, 
+    loadSites,
+    loadWebsiteMetrics,
     loadOverallAnalytics,
     setSelectedCountry,
     setDateRange,
-    refreshData,
-    clearError 
+    refreshData
   } = useMultiAccountSearchConsole(connectedAccounts);
 
   useEffect(() => {
@@ -181,7 +180,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     setSelectedWebsite(siteUrl);
     const existingMetrics = websiteMetrics.find(w => w.siteUrl === siteUrl);
     if (!existingMetrics) {
-      await loadWebsiteMetrics(siteUrl, selectedCountry || undefined);
+      await loadWebsiteMetrics(siteUrl);
     }
   };
 
@@ -199,7 +198,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     if (!selectedWebsites.includes(siteUrl)) {
       const existingMetrics = websiteMetrics.find(w => w.siteUrl === siteUrl);
       if (!existingMetrics) {
-        await loadWebsiteMetrics(siteUrl, selectedCountry || undefined);
+        await loadWebsiteMetrics(siteUrl);
       }
     }
   };
@@ -210,10 +209,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     
     // Reload data with new country filter
     if (selectedWebsite && !compareMode) {
-      loadWebsiteMetrics(selectedWebsite, newCountry || undefined);
+      loadWebsiteMetrics(selectedWebsite);
     } else if (compareMode) {
       selectedWebsites.forEach(siteUrl => {
-        loadWebsiteMetrics(siteUrl, newCountry || undefined);
+        loadWebsiteMetrics(siteUrl);
       });
     } else {
       loadOverallAnalytics();
@@ -225,13 +224,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     
     // Reload data with new date range
     if (selectedWebsite && !compareMode) {
-      loadWebsiteMetrics(selectedWebsite, selectedCountry || undefined, { startDate, endDate });
+      loadWebsiteMetrics(selectedWebsite);
     } else if (compareMode) {
       selectedWebsites.forEach(siteUrl => {
-        loadWebsiteMetrics(siteUrl, selectedCountry || undefined, { startDate, endDate });
+        loadWebsiteMetrics(siteUrl);
       });
     } else {
-      loadOverallAnalytics({ startDate, endDate });
+      loadOverallAnalytics();
     }
   };
 
@@ -1515,7 +1514,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                           </tr>
                         </thead>
                         <tbody>
-                          {getSortedQueries().map((query, index) => (
+                          {getSortedQueries().map((query) => (
                             <tr key={`${query.siteUrl}-${query.query}`} className="border-b border-gray-100 hover:bg-gray-50">
                               <td className="py-3 px-4">
                                 <div className="flex items-center gap-3">
