@@ -261,19 +261,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     const allMetrics = websiteMetrics.filter(m => m.totalClicks > 0 && m.totalImpressions > 0);
     if (allMetrics.length === 0) return '#9CA3AF';
     
-    // Calculate performance score based on clicks and CTR
-    const performanceScore = metrics.totalClicks * metrics.averageCtr;
-    const maxScore = Math.max(...allMetrics.map(m => m.totalClicks * m.averageCtr));
-    const minScore = Math.min(...allMetrics.map(m => m.totalClicks * m.averageCtr));
+    // Calculate performance score based on clicks, impressions and CTR
+    const performanceScore = (metrics.totalClicks * metrics.averageCtr) + (metrics.totalImpressions * 0.1);
+    const maxScore = Math.max(...allMetrics.map(m => (m.totalClicks * m.averageCtr) + (m.totalImpressions * 0.1)));
+    const minScore = Math.min(...allMetrics.map(m => (m.totalClicks * m.averageCtr) + (m.totalImpressions * 0.1)));
     
     // Normalize to 0-1 range
     const normalized = maxScore > minScore ? (performanceScore - minScore) / (maxScore - minScore) : 0.5;
     
-    // Interpolate from red (0) to green (1)
-    const red = Math.round(255 * (1 - normalized));
-    const green = Math.round(255 * normalized);
+    // Use a more varied color palette
+    const colors = [
+      '#EF4444', // Red (worst)
+      '#F97316', // Orange
+      '#F59E0B', // Amber
+      '#EAB308', // Yellow
+      '#84CC16', // Lime
+      '#22C55E', // Green
+      '#10B981', // Emerald
+      '#14B8A6', // Teal
+      '#06B6D4', // Cyan
+      '#3B82F6', // Blue (best)
+    ];
     
-    return `rgb(${red}, ${green}, 0)`;
+    const colorIndex = Math.floor(normalized * (colors.length - 1));
+    return colors[colorIndex];
   };
 
   const formatChartData = (dailyData: Array<{ date: string; clicks: number; impressions: number; ctr: number; position: number }>) => {
@@ -957,10 +968,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                             <p className="text-xs text-gray-500 mb-3">{site.permissionLevel}</p>
                             
                             {metrics ? (
-                              <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="grid grid-cols-3 gap-2 text-xs">
                                 <div className="bg-white rounded p-2 border border-gray-200">
                                   <div className="text-gray-500">Clicks</div>
                                   <div className="font-bold text-gray-900">{metrics.totalClicks.toLocaleString()}</div>
+                                </div>
+                                <div className="bg-white rounded p-2 border border-gray-200">
+                                  <div className="text-gray-500">Impressions</div>
+                                  <div className="font-bold text-gray-900">{metrics.totalImpressions.toLocaleString()}</div>
                                 </div>
                                 <div className="bg-white rounded p-2 border border-gray-200">
                                   <div className="text-gray-500">CTR</div>
@@ -968,9 +983,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                                 </div>
                               </div>
                             ) : (
-                              <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="grid grid-cols-3 gap-2 text-xs">
                                 <div className="bg-gray-100 rounded p-2 border border-gray-200">
                                   <div className="text-gray-500">Clicks</div>
+                                  <div className="font-bold text-gray-400">--</div>
+                                </div>
+                                <div className="bg-gray-100 rounded p-2 border border-gray-200">
+                                  <div className="text-gray-500">Impressions</div>
                                   <div className="font-bold text-gray-400">--</div>
                                 </div>
                                 <div className="bg-gray-100 rounded p-2 border border-gray-200">
