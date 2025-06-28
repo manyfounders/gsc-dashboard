@@ -1,5 +1,6 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
+never ask me like "if you want i can add improvements in code.. bla bla", make it at moment dont't ask me and don't discribe what you want to do, just make it 
