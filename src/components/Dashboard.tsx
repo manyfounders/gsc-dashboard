@@ -8,12 +8,80 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, TrendingDown, Mouse, Eye, Target, ArrowUp, Globe, RefreshCw, AlertCircle, Loader2, BarChart3, Search, Smartphone, Table, ArrowLeft, MapPin, Crown, CalendarDays, ChevronUp, ChevronDown, Plus, User, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, Mouse, Eye, Target, ArrowUp, Globe, RefreshCw, AlertCircle, Loader2, BarChart3, Search, Smartphone, Table, ArrowLeft, MapPin, Crown, CalendarDays, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Plus, User, X, MessageSquare } from 'lucide-react';
 import { useMultiAccountSearchConsole, getCountryFlag, getCountryName } from '../hooks/useMultiAccountSearchConsole';
 import { format } from 'date-fns';
 import { SiteCardSkeleton } from './Skeleton';
 import { QueryNetworkMap } from './QueryNetworkMap';
+import { Comments } from './Comments';
+import { CommentPreview } from './CommentPreview';
 
+// Импортируем countryData из хука
+const countryData: Record<string, { name: string; flag: string }> = {
+  'usa': { name: 'United States', flag: '🇺🇸' },
+  'gbr': { name: 'United Kingdom', flag: '🇬🇧' },
+  'deu': { name: 'Germany', flag: '🇩🇪' },
+  'fra': { name: 'France', flag: '🇫🇷' },
+  'esp': { name: 'Spain', flag: '🇪🇸' },
+  'ita': { name: 'Italy', flag: '🇮🇹' },
+  'nld': { name: 'Netherlands', flag: '🇳🇱' },
+  'can': { name: 'Canada', flag: '🇨🇦' },
+  'aus': { name: 'Australia', flag: '🇦🇺' },
+  'jpn': { name: 'Japan', flag: '🇯🇵' },
+  'kor': { name: 'South Korea', flag: '🇰🇷' },
+  'chn': { name: 'China', flag: '🇨🇳' },
+  'ind': { name: 'India', flag: '🇮🇳' },
+  'bra': { name: 'Brazil', flag: '🇧🇷' },
+  'mex': { name: 'Mexico', flag: '🇲🇽' },
+  'rus': { name: 'Russia', flag: '🇷🇺' },
+  'tur': { name: 'Turkey', flag: '🇹🇷' },
+  'pol': { name: 'Poland', flag: '🇵🇱' },
+  'swe': { name: 'Sweden', flag: '🇸🇪' },
+  'nor': { name: 'Norway', flag: '🇳🇴' },
+  'dnk': { name: 'Denmark', flag: '🇩🇰' },
+  'fin': { name: 'Finland', flag: '🇫🇮' },
+  'che': { name: 'Switzerland', flag: '🇨🇭' },
+  'aut': { name: 'Austria', flag: '🇦🇹' },
+  'bel': { name: 'Belgium', flag: '🇧🇪' },
+  'prt': { name: 'Portugal', flag: '🇵🇹' },
+  'grc': { name: 'Greece', flag: '🇬🇷' },
+  'cze': { name: 'Czech Republic', flag: '🇨🇿' },
+  'hun': { name: 'Hungary', flag: '🇭🇺' },
+  'rou': { name: 'Romania', flag: '🇷🇴' },
+  'bgr': { name: 'Bulgaria', flag: '🇧🇬' },
+  'hrv': { name: 'Croatia', flag: '🇭🇷' },
+  'svk': { name: 'Slovakia', flag: '🇸🇰' },
+  'svn': { name: 'Slovenia', flag: '🇸🇮' },
+  'est': { name: 'Estonia', flag: '🇪🇪' },
+  'lva': { name: 'Latvia', flag: '🇱🇻' },
+  'ltu': { name: 'Lithuania', flag: '🇱🇹' },
+  'irl': { name: 'Ireland', flag: '🇮🇪' },
+  'isr': { name: 'Israel', flag: '🇮🇱' },
+  'are': { name: 'UAE', flag: '🇦🇪' },
+  'sau': { name: 'Saudi Arabia', flag: '🇸🇦' },
+  'tha': { name: 'Thailand', flag: '🇹🇭' },
+  'sgp': { name: 'Singapore', flag: '🇸🇬' },
+  'mys': { name: 'Malaysia', flag: '🇲🇾' },
+  'idn': { name: 'Indonesia', flag: '🇮🇩' },
+  'phl': { name: 'Philippines', flag: '🇵🇭' },
+  'vnm': { name: 'Vietnam', flag: '🇻🇳' },
+  'nzl': { name: 'New Zealand', flag: '🇳🇿' },
+  'zaf': { name: 'South Africa', flag: '🇿🇦' },
+  'arg': { name: 'Argentina', flag: '🇦🇷' },
+  'chl': { name: 'Chile', flag: '🇨🇱' },
+  'col': { name: 'Colombia', flag: '🇨🇴' },
+  'per': { name: 'Peru', flag: '🇵🇪' },
+  'ukr': { name: 'Ukraine', flag: '🇺🇦' },
+  'srb': { name: 'Serbia', flag: '🇷🇸' },
+  'mkd': { name: 'North Macedonia', flag: '🇲🇰' },
+  'alb': { name: 'Albania', flag: '🇦🇱' },
+  'bih': { name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
+  'mne': { name: 'Montenegro', flag: '🇲🇪' },
+  'lux': { name: 'Luxembourg', flag: '🇱🇺' },
+  'mlt': { name: 'Malta', flag: '🇲🇹' },
+  'cyp': { name: 'Cyprus', flag: '🇨🇾' },
+  'isl': { name: 'Iceland', flag: '🇮🇸' },
+};
 
 interface DashboardProps {
   apiKey: string;
@@ -26,112 +94,20 @@ interface GoogleTokenResponse {
   error_description?: string;
 }
 
-interface DateRangePickerProps {
-  startDate: Date;
-  endDate: Date;
-  onDateRangeChange: (startDate: Date, endDate: Date) => void;
-  disabled?: boolean;
-}
-
-const DateRangePicker: React.FC<DateRangePickerProps> = ({ 
-  startDate, 
-  endDate, 
-  onDateRangeChange, 
-  disabled 
-}) => {
-  const [localStartDate, setLocalStartDate] = useState(format(startDate, 'yyyy-MM-dd'));
-  const [localEndDate, setLocalEndDate] = useState(format(endDate, 'yyyy-MM-dd'));
-
-  const handleApply = () => {
-    const start = new Date(localStartDate);
-    const end = new Date(localEndDate);
-    
-    if (start <= end) {
-      onDateRangeChange(start, end);
-    }
-  };
-
-  const presetRanges = [
-    { label: 'Last 7 days', days: 7 },
-    { label: 'Last 14 days', days: 14 },
-    { label: 'Last 28 days', days: 28 },
-    { label: 'Last 3 months', days: 90 },
-  ];
-
-  const handlePresetSelect = (days: number) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - days);
-    
-    setLocalStartDate(format(start, 'yyyy-MM-dd'));
-    setLocalEndDate(format(end, 'yyyy-MM-dd'));
-    onDateRangeChange(start, end);
-  };
-
-  return (
-    <Card className="border-gray-200 shadow-sm">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-5 w-5 text-gray-600" />
-            <span className="font-medium text-gray-900">Date Range:</span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Label htmlFor="start-date" className="text-sm">From:</Label>
-            <Input
-              id="start-date"
-              type="date"
-              value={localStartDate}
-              onChange={(e) => setLocalStartDate(e.target.value)}
-              disabled={disabled}
-              className="w-auto"
-            />
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Label htmlFor="end-date" className="text-sm">To:</Label>
-            <Input
-              id="end-date"
-              type="date"
-              value={localEndDate}
-              onChange={(e) => setLocalEndDate(e.target.value)}
-              disabled={disabled}
-              className="w-auto"
-            />
-          </div>
-          
-          <Button onClick={handleApply} disabled={disabled} size="sm">
-            Apply
-          </Button>
-          
-          <div className="flex gap-2">
-            {presetRanges.map((preset) => (
-              <Button
-                key={preset.days}
-                variant="outline"
-                size="sm"
-                onClick={() => handlePresetSelect(preset.days)}
-                disabled={disabled}
-                className="text-xs"
-              >
-                {preset.label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
 
 export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) => {
   const [selectedWebsite, setSelectedWebsite] = useState<string>('');
   const [selectedWebsites, setSelectedWebsites] = useState<string[]>([]);
-  const [compareMode, setCompareMode] = useState(false);
+  const [compareMode, setCompareMode] = useState(true);
   const [selectedQuery, setSelectedQuery] = useState<{ query: string; siteUrl: string } | null>(null);
   const [querySortField, setQuerySortField] = useState<'site' | 'query' | 'clicks' | 'impressions' | 'ctr' | 'position'>('clicks');
   const [querySortDirection, setQuerySortDirection] = useState<'asc' | 'desc'>('desc');
+  const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
+  const [showCommentsPanel, setShowCommentsPanel] = useState(false);
+  const [commentsSiteUrl, setCommentsSiteUrl] = useState<string>('');
+  const [showAllSites, setShowAllSites] = useState(false);
+  const [siteFilter, setSiteFilter] = useState<'clicks' | 'impressions' | 'position'>('clicks');
   const [connectedAccounts, setConnectedAccounts] = useState<Array<{
     email: string;
     apiKey: string;
@@ -176,16 +152,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
   //   }
   // }, [sites, selectedWebsite, compareMode, loadWebsiteMetrics, selectedCountry]);
 
-  const handleWebsiteChange = async (siteUrl: string) => {
-    setSelectedWebsite(siteUrl);
-    const existingMetrics = websiteMetrics.find(w => w.siteUrl === siteUrl);
-    if (!existingMetrics) {
-      await loadWebsiteMetrics(siteUrl);
-    }
-  };
-
   const handleBackToAllSites = () => {
     setSelectedWebsite('');
+  };
+
+  const handleWebsiteSelect = async (siteUrl: string) => {
+    setSelectedWebsite(siteUrl);
+    await loadWebsiteMetrics(siteUrl, selectedCountry || undefined);
+  };
+
+  const handleWebsiteClick = async (siteUrl: string) => {
+    setCommentsSiteUrl(siteUrl);
+    setShowCommentsPanel(true);
+    setIsRightPanelCollapsed(false);
   };
 
   const handleWebsiteToggle = async (siteUrl: string) => {
@@ -447,6 +426,69 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     });
   };
 
+  const getSortedSites = () => {
+    return sites
+      .map(site => {
+        const metrics = websiteMetrics.find(w => w.siteUrl === site.siteUrl);
+        return { site, metrics };
+      })
+      .filter(item => item.metrics) // Только сайты с загруженными метриками
+      .sort((a, b) => {
+        if (!a.metrics || !b.metrics) return 0;
+        
+        let aValue: number;
+        let bValue: number;
+        
+        switch (siteFilter) {
+          case 'clicks':
+            aValue = a.metrics.totalClicks;
+            bValue = b.metrics.totalClicks;
+            break;
+          case 'impressions':
+            aValue = a.metrics.totalImpressions;
+            bValue = b.metrics.totalImpressions;
+            break;
+          case 'position':
+            aValue = a.metrics.averagePosition;
+            bValue = b.metrics.averagePosition;
+            break;
+          default:
+            aValue = a.metrics.totalClicks;
+            bValue = b.metrics.totalClicks;
+        }
+        
+        // Для позиции - чем меньше, тем лучше
+        if (siteFilter === 'position') {
+          return aValue - bValue;
+        }
+        
+        // Для кликов и показов - чем больше, тем лучше
+        return bValue - aValue;
+      })
+      .map(item => item.site);
+  };
+
+  const getTrendData = (dailyData: Array<{ date: string; clicks: number; impressions: number; ctr: number; position: number }>) => {
+    if (!dailyData || dailyData.length < 7) return { trend: 'neutral', change: 0 };
+    
+    // Берем последние 7 дней
+    const last7Days = dailyData.slice(-7);
+    const firstHalf = last7Days.slice(0, 3); // Первые 3 дня
+    const secondHalf = last7Days.slice(-3); // Последние 3 дня
+    
+    // Считаем средние значения для кликов
+    const firstHalfAvg = firstHalf.reduce((sum, day) => sum + day.clicks, 0) / firstHalf.length;
+    const secondHalfAvg = secondHalf.reduce((sum, day) => sum + day.clicks, 0) / secondHalf.length;
+    
+    if (firstHalfAvg === 0) return { trend: 'neutral', change: 0 };
+    
+    const changePercent = ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100;
+    
+    if (changePercent > 5) return { trend: 'up', change: Math.round(changePercent) };
+    if (changePercent < -5) return { trend: 'down', change: Math.round(Math.abs(changePercent)) };
+    return { trend: 'neutral', change: 0 };
+  };
+
   const handleAddAccount = () => {
     setShowAddAccountModal(true);
   };
@@ -520,15 +562,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     className?: string;
   }> = ({ field, children, className }) => (
     <th 
-      className={`cursor-pointer hover:bg-gray-50 transition-colors ${className || ''}`}
+      className={`cursor-pointer ${className || ''}`}
       onClick={() => handleQuerySort(field)}
     >
       <div className="flex items-center gap-1">
         {children}
         {querySortField === field && (
-          querySortDirection === 'asc' ? 
-            <ChevronUp className="h-4 w-4 text-blue-600" /> : 
-            <ChevronDown className="h-4 w-4 text-blue-600" />
+          querySortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
         )}
       </div>
     </th>
@@ -536,131 +576,149 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <div className="w-80 bg-white border-r border-gray-200 shadow-sm flex flex-col">
-        {/* Logo and Title */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              <BarChart3 className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Search Console Analytics</h1>
-              <p className="text-sm text-gray-600">
-                {compareMode ? 'Advanced comparison mode' : 'Detailed performance insights'}
-              </p>
-              <p className="text-xs text-blue-600">
-                {connectedAccounts.length} account{connectedAccounts.length !== 1 ? 's' : ''} connected
-              </p>
-            </div>
-          </div>
+      {/* Left Sidebar */}
+      <div className={`bg-white border-r border-gray-200 shadow-sm flex flex-col transition-all duration-300 ${
+        isLeftPanelCollapsed ? 'w-16' : 'w-80'
+      }`}>
+        {/* Collapse/Expand Button */}
+        <div className="p-2 border-b border-gray-200">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsLeftPanelCollapsed(!isLeftPanelCollapsed)}
+            className="w-full"
+          >
+            {isLeftPanelCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
         </div>
 
-        {/* Navigation */}
-        <div className="p-6 space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Mode</h3>
-            <div className="space-y-2">
-              {compareMode ? (
-                <Button 
-                  onClick={toggleCompareMode} 
-                  variant="outline"
-                  className="w-full justify-start border-gray-300"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              ) : (
-                <Button 
-                  onClick={toggleCompareMode} 
-                  variant="outline"
-                  className="w-full justify-start border-gray-300"
-                >
-                  <Table className="h-4 w-4 mr-2" />
-                  Compare Sites
-                </Button>
-              )}
+        {!isLeftPanelCollapsed && (
+          <>
+            {/* Logo and Title */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <BarChart3 className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Search Console Analytics</h1>
+                  <p className="text-sm text-gray-600">
+                    {compareMode ? 'Advanced comparison mode' : 'Detailed performance insights'}
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    {connectedAccounts.length} account{connectedAccounts.length !== 1 ? 's' : ''} connected
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Connected Accounts</h3>
-            <div className="space-y-2">
-              {connectedAccounts.map((account, index) => (
-                <div key={account.email} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <User className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-900 truncate">
-                        {account.displayName}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {account.email}
-                      </p>
-                    </div>
-                  </div>
-                  {connectedAccounts.length > 1 && index > 0 && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleRemoveAccount(account.email)}
-                      className="h-6 w-6 p-0 hover:bg-red-100"
+            {/* Navigation */}
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Mode</h3>
+                <div className="space-y-2">
+                  {compareMode ? (
+                    <Button 
+                      onClick={toggleCompareMode} 
+                      variant="outline"
+                      className="w-full justify-start border-gray-300"
                     >
-                      <X className="h-3 w-3 text-red-500" />
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Overview Mode
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={toggleCompareMode} 
+                      variant="outline"
+                      className="w-full justify-start border-gray-300"
+                    >
+                      <Table className="h-4 w-4 mr-2" />
+                      Compare Mode
                     </Button>
                   )}
                 </div>
-              ))}
-              
-              <Button 
-                onClick={handleAddAccount}
-                variant="outline" 
-                className="w-full justify-start border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Google Account
-              </Button>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Connected Accounts</h3>
+                <div className="space-y-2">
+                  {connectedAccounts.map((account, index) => (
+                    <div key={account.email} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <User className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-900 truncate">
+                            {account.displayName}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {account.email}
+                          </p>
+                        </div>
+                      </div>
+                      {connectedAccounts.length > 1 && index > 0 && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveAccount(account.email)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <Button 
+                    onClick={handleAddAccount}
+                    variant="outline" 
+                    className="w-full justify-start border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Google Account
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Actions</h3>
+                <div className="space-y-2">
+                  <Button 
+                    onClick={refreshData} 
+                    variant="outline" 
+                    disabled={isLoading} 
+                    className="w-full justify-start border-gray-300"
+                  >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  Refresh Data
+                </Button>
+                  <Button 
+                    onClick={onDisconnect} 
+                    variant="outline" 
+                    className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    <Globe className="h-4 w-4 mr-2" />
+                  Disconnect
+                </Button>
+              </div>
             </div>
-          </div>
+            </div>
 
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Actions</h3>
-            <div className="space-y-2">
-              <Button 
-                onClick={refreshData} 
-                variant="outline" 
-                disabled={isLoading} 
-                className="w-full justify-start border-gray-300"
-              >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Refresh Data
-            </Button>
-              <Button 
-                onClick={onDisconnect} 
-                variant="outline" 
-                className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50"
-              >
-                <Globe className="h-4 w-4 mr-2" />
-              Disconnect
-            </Button>
-          </div>
-        </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-auto p-6 border-t border-gray-200">
-          <div className="text-xs text-gray-500">
-            <p>Google Search Console</p>
-            <p>Analytics Dashboard</p>
-          </div>
-        </div>
+            {/* Footer */}
+            <div className="mt-auto p-6 border-t border-gray-200">
+              <div className="text-xs text-gray-500">
+                <p>Google Search Console</p>
+                <p>Analytics Dashboard</p>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="w-full p-6 space-y-8">
+        <div className="w-full p-8 space-y-8 max-w-none">
         {error && (
           <Alert className="border-red-200 bg-red-50">
             <AlertCircle className="h-4 w-4 text-red-600" />
@@ -671,64 +729,122 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
         )}
 
         {/* Filters Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Country Filter */}
-          <Card className="border-gray-200 shadow-sm">
-            <CardContent className="p-4">
+        <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-6 flex-wrap">
+              {/* Country Filter */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium text-gray-900">Country Filter:</span>
+                  <span className="font-medium text-gray-900">Country:</span>
                 </div>
-                <Select value={selectedCountry || 'all'} onValueChange={handleCountryChange}>
-                  <SelectTrigger className="w-[200px]">
+                <Select 
+                  value={selectedCountry || 'all'} 
+                  onValueChange={handleCountryChange}
+                >
+                  <SelectTrigger className="text-xs border-gray-200">
                     <SelectValue placeholder="All Countries" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Countries</SelectItem>
-                    <SelectItem value="usa">United States</SelectItem>
-                    <SelectItem value="gbr">United Kingdom</SelectItem>
-                    <SelectItem value="deu">Germany</SelectItem>
-                    <SelectItem value="fra">France</SelectItem>
-                    <SelectItem value="esp">Spain</SelectItem>
-                    <SelectItem value="ita">Italy</SelectItem>
-                    <SelectItem value="can">Canada</SelectItem>
-                    <SelectItem value="aus">Australia</SelectItem>
-                    <SelectItem value="jpn">Japan</SelectItem>
-                    <SelectItem value="bra">Brazil</SelectItem>
+                    {Object.keys(countryData).map(country => (
+                      <SelectItem key={country} value={country}>
+                        <div className="flex items-center gap-2">
+                          <span>{getCountryFlag(country)}</span>
+                          <span>{getCountryName(country)}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {selectedCountry && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
                     Filtered by {selectedCountry.toUpperCase()}
                   </Badge>
                 )}
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Date Range Filter */}
-          <Card className="border-gray-200 shadow-sm">
-            <CardContent className="p-4">
-              <DateRangePicker
-                startDate={dateRange.startDate}
-                endDate={dateRange.endDate}
-                onDateRangeChange={handleDateRangeChange}
-                disabled={isLoading}
-              />
-            </CardContent>
-          </Card>
-        </div>
+              {/* Date Range Filter */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-gray-600" />
+                  <span className="font-medium text-gray-900">Date Range:</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="start-date" className="text-sm">From:</Label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={format(dateRange.startDate, 'yyyy-MM-dd')}
+                    onChange={(e) => {
+                      const start = new Date(e.target.value);
+                      const end = dateRange.endDate;
+                      if (start <= end) {
+                        handleDateRangeChange(start, end);
+                      }
+                    }}
+                    disabled={isLoading}
+                    className="w-auto border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="end-date" className="text-sm">To:</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={format(dateRange.endDate, 'yyyy-MM-dd')}
+                    onChange={(e) => {
+                      const start = dateRange.startDate;
+                      const end = new Date(e.target.value);
+                      if (start <= end) {
+                        handleDateRangeChange(start, end);
+                      }
+                    }}
+                    disabled={isLoading}
+                    className="w-auto border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div className="flex gap-2">
+                  {[
+                    { label: 'Last 7 days', days: 7 },
+                    { label: 'Last 14 days', days: 14 },
+                    { label: 'Last 28 days', days: 28 },
+                    { label: 'Last 3 months', days: 90 },
+                  ].map((preset) => (
+                    <Button
+                      key={preset.days}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const end = new Date();
+                        const start = new Date();
+                        start.setDate(end.getDate() - preset.days);
+                        handleDateRangeChange(start, end);
+                      }}
+                      disabled={isLoading}
+                      className="text-xs border-gray-200 hover:bg-gray-50"
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {!compareMode ? (
-          // Normal Dashboard Mode
+          // Overview Mode (бывший Normal Dashboard Mode)
           <>
             {/* Overall Analytics Summary - shown before site selection */}
             {overallAnalytics && (!selectedWebsite || selectedWebsite === '') && (
               <>
                 {/* Overall Metrics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
@@ -743,7 +859,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                     </CardContent>
                   </Card>
 
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
@@ -758,7 +874,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                     </CardContent>
                   </Card>
 
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
@@ -773,7 +889,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                     </CardContent>
                   </Card>
 
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
@@ -796,9 +912,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                 />
 
                 {/* Top Performers Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                   {/* Top Sites */}
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
           <CardHeader>
                       <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                         <Crown className="h-5 w-5 text-yellow-600" />
@@ -832,7 +948,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                   </Card>
 
                   {/* Top Queries */}
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
           <CardHeader>
                       <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                         <Search className="h-5 w-5 text-blue-600" />
@@ -874,7 +990,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                   </Card>
 
                   {/* Top Countries */}
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                     <CardHeader>
                       <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                         <MapPin className="h-5 w-5 text-green-600" />
@@ -910,109 +1026,35 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
               </>
             )}
 
-            {/* Website Selector */}
-            <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-              <CardHeader>
-                <CardTitle className="text-2xl text-gray-900 flex items-center gap-3">
-                  <Globe className="h-6 w-6" />
-                  Your Websites
-                </CardTitle>
-                <CardDescription className="text-gray-600">
-                  {selectedWebsite ? 'Site selected - view below or return to overview' : 'Select a website to view detailed analytics'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {selectedWebsite && (
-                  <div className="mb-4">
-                    <Button 
-                      onClick={handleBackToAllSites}
-                      variant="outline" 
-                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Back to All Sites Overview
-                    </Button>
-                  </div>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {sites.map((site) => {
-                    const isSelected = selectedWebsite === site.siteUrl;
-                    const metrics = websiteMetrics.find(w => w.siteUrl === site.siteUrl);
-                    const isLoading = loadingSites.has(site.siteUrl);
-                    
-                    if (isLoading) {
-                      return <SiteCardSkeleton key={site.siteUrl} />;
-                    }
-                    
-                    return (
-                      <div 
-                        key={site.siteUrl} 
-                        className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
-                          isSelected 
-                            ? 'bg-blue-50 border-blue-200 shadow-md' 
-                            : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                        }`}
-                        onClick={() => handleWebsiteChange(site.siteUrl)}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <div 
-                                className="w-3 h-3 rounded-full" 
-                                style={{ backgroundColor: getPerformanceColor(site.siteUrl) }}
-                              />
-                              <h3 className="font-semibold text-gray-900 truncate">
-                                {getSiteDisplayName(site.siteUrl)}
-                              </h3>
-                            </div>
-                            <p className="text-xs text-gray-500 mb-3">{site.permissionLevel}</p>
-                            
-                            {metrics ? (
-                              <div className="grid grid-cols-3 gap-2 text-xs">
-                                <div className="bg-white rounded p-2 border border-gray-200">
-                                  <div className="text-gray-500">Clicks</div>
-                                  <div className="font-bold text-gray-900">{metrics.totalClicks.toLocaleString()}</div>
-                                </div>
-                                <div className="bg-white rounded p-2 border border-gray-200">
-                                  <div className="text-gray-500">Impressions</div>
-                                  <div className="font-bold text-gray-900">{metrics.totalImpressions.toLocaleString()}</div>
-                                </div>
-                                <div className="bg-white rounded p-2 border border-gray-200">
-                                  <div className="text-gray-500">CTR</div>
-                                  <div className="font-bold text-gray-900">{(metrics.averageCtr * 100).toFixed(1)}%</div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-3 gap-2 text-xs">
-                                <div className="bg-gray-100 rounded p-2 border border-gray-200">
-                                  <div className="text-gray-500">Clicks</div>
-                                  <div className="font-bold text-gray-400">--</div>
-                                </div>
-                                <div className="bg-gray-100 rounded p-2 border border-gray-200">
-                                  <div className="text-gray-500">Impressions</div>
-                                  <div className="font-bold text-gray-400">--</div>
-                                </div>
-                                <div className="bg-gray-100 rounded p-2 border border-gray-200">
-                                  <div className="text-gray-500">CTR</div>
-                                  <div className="font-bold text-gray-400">--</div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+
 
             {/* Detailed Analytics for Selected Site */}
             {currentWebsiteMetrics && (
               <>
+                {/* Back Button */}
+                <div className="mb-6">
+                  <Button
+                    variant="outline"
+                    onClick={handleBackToAllSites}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Назад к списку сайтов
+                  </Button>
+                </div>
+
+                {/* Site Title */}
+                <div className="mb-6">
+                  <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                    <Globe className="h-6 w-6 text-blue-600" />
+                    {getSiteDisplayName(selectedWebsite)}
+                  </h1>
+                  <p className="text-gray-600 mt-1">Детальная аналитика и комментарии</p>
+                </div>
+
                 {/* Key Metrics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                           <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                               <div>
@@ -1039,7 +1081,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                           </CardContent>
                         </Card>
 
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                           <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                               <div>
@@ -1050,10 +1092,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                           <Eye className="h-8 w-8 text-green-600" />
                               </div>
                             </div>
+                            <div className="flex items-center mt-3">
+                              {currentWebsiteMetrics.trend === 'up' ? (
+                                <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
+                              ) : currentWebsiteMetrics.trend === 'down' ? (
+                                <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
+                              ) : null}
+                              <span className={`text-sm font-medium ${
+                                currentWebsiteMetrics.trend === 'up' ? 'text-green-600' : 
+                                currentWebsiteMetrics.trend === 'down' ? 'text-red-600' : 'text-gray-500'
+                              }`}>
+                                {currentWebsiteMetrics.change > 0 ? '+' : ''}{currentWebsiteMetrics.change}%
+                              </span>
+                            </div>
                           </CardContent>
                         </Card>
 
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                           <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                               <div>
@@ -1067,7 +1122,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                           </CardContent>
                         </Card>
 
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                           <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                               <div>
@@ -1083,8 +1138,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                       </div>
 
                       {/* Charts Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                           <CardHeader>
                       <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                         <BarChart3 className="h-5 w-5" />
@@ -1115,7 +1170,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                           </CardContent>
                         </Card>
 
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                           <CardHeader>
                       <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                         <TrendingUp className="h-5 w-5" />
@@ -1149,7 +1204,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
 
                       {/* Bottom Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                  <Card className="lg:col-span-2 border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="lg:col-span-2 border-gray-200 shadow-sm">
                           <CardHeader>
                       <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                         <Search className="h-5 w-5" />
@@ -1204,7 +1259,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                           </CardContent>
                         </Card>
 
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-gray-200 shadow-sm">
                           <CardHeader>
                       <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                         <MapPin className="h-5 w-5" />
@@ -1237,7 +1292,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                     </CardContent>
                   </Card>
 
-                  <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <Card className="border-gray-200 shadow-sm">
                           <CardHeader>
                       <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                         <Smartphone className="h-5 w-5" />
@@ -1300,16 +1355,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                   ) : (
           // Compare Mode
           <>
-            {/* Date Range Picker for Compare Mode */}
-            <DateRangePicker
-              startDate={dateRange.startDate}
-              endDate={dateRange.endDate}
-              onDateRangeChange={handleDateRangeChange}
-              disabled={isLoading}
-            />
+            {/* Date Range Picker for Compare Mode - REMOVED (duplicate functionality) */}
 
             {/* Site Selection for Compare Mode */}
-            <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-2xl text-gray-900 flex items-center gap-3">
                   <Table className="h-6 w-6" />
@@ -1323,8 +1372,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {sites.map((site) => {
+                {/* Фильтр и кнопка "Показать все" */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-700">Сортировка по:</span>
+                      <Select value={siteFilter} onValueChange={(value: 'clicks' | 'impressions' | 'position') => setSiteFilter(value)}>
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="clicks">Кликам</SelectItem>
+                          <SelectItem value="impressions">Показам</SelectItem>
+                          <SelectItem value="position">Позиции</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAllSites(!showAllSites)}
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                  >
+                    {showAllSites ? 'Скрыть' : 'Показать все'}
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  {getSortedSites().slice(0, showAllSites ? undefined : 5).map((site) => {
                     const isSelected = selectedWebsites.includes(site.siteUrl);
                     const metrics = websiteMetrics.find(w => w.siteUrl === site.siteUrl);
                     const isLoading = loadingSites.has(site.siteUrl);
@@ -1336,58 +1413,119 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                     return (
                       <div 
                         key={site.siteUrl} 
-                        className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
+                        className={`p-4 rounded-xl border transition-all duration-200 cursor-pointer hover:bg-gray-100 ${
                           isSelected 
                             ? 'bg-green-50 border-green-200 shadow-md' 
-                            : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                            : 'bg-gray-50 border-gray-200'
                         }`}
-                        onClick={() => handleWebsiteToggle(site.siteUrl)}
+                        onClick={() => handleWebsiteClick(site.siteUrl)}
                       >
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-center gap-4">
                           <Checkbox 
                             checked={isSelected}
-                            className="mt-1 border-gray-400 data-[state=checked]:bg-green-600"
+                            className="border-gray-400 data-[state=checked]:bg-green-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleWebsiteToggle(site.siteUrl);
+                            }}
                           />
+                          
+                          {/* Название сайта и уровень доступа */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-2 mb-1">
                               <div 
-                                className="w-3 h-3 rounded-full" 
+                                className="w-3 h-3 rounded-full flex-shrink-0" 
                                 style={{ backgroundColor: getPerformanceColor(site.siteUrl) }}
                               />
                               <h3 className="font-semibold text-gray-900 truncate">
                                 {getSiteDisplayName(site.siteUrl)}
                               </h3>
                             </div>
-                            <p className="text-xs text-gray-500 mb-3">{site.permissionLevel}</p>
-                            
-                            {metrics ? (
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div className="bg-white rounded p-2 border border-gray-200">
-                                  <div className="text-gray-500">Clicks</div>
-                                  <div className="font-bold text-gray-900">{metrics.totalClicks.toLocaleString()}</div>
-                                </div>
-                                <div className="bg-white rounded p-2 border border-gray-200">
-                                  <div className="text-gray-500">CTR</div>
-                                  <div className="font-bold text-gray-900">{(metrics.averageCtr * 100).toFixed(1)}%</div>
-                                </div>
+                            <p className="text-xs text-gray-500">{site.permissionLevel}</p>
+                          </div>
+                          
+                          {/* Метрики - горизонтальное расположение */}
+                          {metrics ? (
+                            <div className="flex items-center gap-6">
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500 mb-1">Clicks</div>
+                                <div className="font-bold text-gray-900">{metrics.totalClicks.toLocaleString()}</div>
+                                {/* Тенденция кликов */}
+                                {(() => {
+                                  const trendData = getTrendData(metrics.dailyData);
+                                  return (
+                                    <div className="flex items-center justify-center gap-1 mt-1">
+                                      {trendData.trend === 'up' ? (
+                                        <TrendingUp className="h-3 w-3 text-green-600" />
+                                      ) : trendData.trend === 'down' ? (
+                                        <TrendingDown className="h-3 w-3 text-red-600" />
+                                      ) : null}
+                                      {trendData.change > 0 && (
+                                        <span className={`text-xs font-medium ${
+                                          trendData.trend === 'up' ? 'text-green-600' : 
+                                          trendData.trend === 'down' ? 'text-red-600' : 'text-gray-500'
+                                        }`}>
+                                          {trendData.change}%
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                               </div>
-                            ) : (
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div className="bg-gray-100 rounded p-2 border border-gray-200">
-                                  <div className="text-gray-500">Clicks</div>
-                                  <div className="font-bold text-gray-400">--</div>
-                                </div>
-                                <div className="bg-gray-100 rounded p-2 border border-gray-200">
-                                  <div className="text-gray-500">CTR</div>
-                                  <div className="font-bold text-gray-400">--</div>
-                      </div>
-                    </div>
-                  )}
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500 mb-1">Impressions</div>
+                                <div className="font-bold text-gray-900">{metrics.totalImpressions.toLocaleString()}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500 mb-1">CTR</div>
+                                <div className="font-bold text-gray-900">{(metrics.averageCtr * 100).toFixed(1)}%</div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-6">
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500 mb-1">Clicks</div>
+                                <div className="font-bold text-gray-400">--</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500 mb-1">Impressions</div>
+                                <div className="font-bold text-gray-400">--</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500 mb-1">CTR</div>
+                                <div className="font-bold text-gray-400">--</div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Комментарии */}
+                          <div className="flex-shrink-0">
+                            <CommentPreview 
+                              siteUrl={site.siteUrl} 
+                              onViewComments={() => handleWebsiteClick(site.siteUrl)}
+                            />
                           </div>
                         </div>
                       </div>
                     );
                   })}
+                  
+                  {/* Индикатор скрытых сайтов */}
+                  {!showAllSites && getSortedSites().length > 5 && (
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-center text-sm text-gray-600">
+                        Показано 5 из {getSortedSites().length} сайтов. 
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => setShowAllSites(true)}
+                          className="text-blue-600 hover:text-blue-700 p-0 h-auto ml-1"
+                        >
+                          Показать все
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1396,7 +1534,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
             {selectedWebsites.length > 0 && (
               <>
                 {/* Overall Metrics Comparison */}
-                <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                       <BarChart3 className="h-5 w-5" />
@@ -1411,13 +1549,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                       <table className="w-full text-gray-900">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 px-4 text-gray-700 font-semibold">Website</th>
-                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">Total Clicks</th>
-                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">Total Impressions</th>
-                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">Average CTR</th>
-                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">Average Position</th>
-                            <th className="text-left py-3 px-4 text-gray-700 font-semibold">Top Countries</th>
-                            <th className="text-center py-3 px-4 text-gray-700 font-semibold">Trend</th>
+                            <th className="text-left py-4 px-6 text-gray-700 font-semibold">Website</th>
+                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Total Clicks</th>
+                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Total Impressions</th>
+                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Average CTR</th>
+                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Average Position</th>
+                            <th className="text-left py-4 px-6 text-gray-700 font-semibold">Top Countries</th>
+                            <th className="text-center py-4 px-6 text-gray-700 font-semibold">Trend</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1426,8 +1564,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                             if (!metrics) return null;
                             
                             return (
-                              <tr key={siteUrl} className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-4 px-4">
+                              <tr key={siteUrl} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                                <td className="py-4 px-6">
                                   <div className="flex items-center gap-3">
                                     <div 
                                       className="w-3 h-3 rounded-full" 
@@ -1436,19 +1574,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                                     <span className="font-medium">{getSiteDisplayName(siteUrl)}</span>
                                   </div>
                                 </td>
-                                <td className="text-right py-4 px-4 font-bold">
+                                <td className="text-right py-4 px-6 font-bold">
                                   {metrics.totalClicks.toLocaleString()}
                                 </td>
-                                <td className="text-right py-4 px-4 font-bold">
+                                <td className="text-right py-4 px-6 font-bold">
                                   {metrics.totalImpressions.toLocaleString()}
                                 </td>
-                                <td className="text-right py-4 px-4 font-bold">
+                                <td className="text-right py-4 px-6 font-bold">
                                   {(metrics.averageCtr * 100).toFixed(2)}%
                                 </td>
-                                <td className="text-right py-4 px-4 font-bold">
+                                <td className="text-right py-4 px-6 font-bold">
                                   {metrics.averagePosition.toFixed(1)}
                                 </td>
-                                <td className="py-4 px-4">
+                                <td className="py-4 px-6">
                                   <div className="flex flex-wrap gap-1">
                                     {metrics.countryBreakdown.slice(0, 3).map((country, index) => (
                                       <Badge 
@@ -1471,7 +1609,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                                     )}
                                   </div>
                                 </td>
-                                <td className="text-center py-4 px-4">
+                                <td className="text-center py-4 px-6">
                                   <div className="flex items-center justify-center gap-1">
                                     {metrics.trend === 'up' ? (
                                       <TrendingUp className="h-4 w-4 text-green-600" />
@@ -1496,7 +1634,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
         </Card>
 
                 {/* Top Queries Comparison */}
-                <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                       <Search className="h-5 w-5" />
@@ -1510,32 +1648,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                     <div className="overflow-x-auto">
                       <table className="w-full text-gray-900 text-sm">
                         <thead>
-                          <tr className="border-b border-gray-200 bg-gray-50">
-                            <SortableHeader field="site" className="text-left py-3 px-4 text-gray-700 font-semibold">
+                          <tr className="border-b border-gray-200 bg-gray-50/50">
+                            <SortableHeader field="site" className="text-left py-4 px-6 text-gray-700 font-semibold">
                               Site
                             </SortableHeader>
-                            <SortableHeader field="query" className="text-left py-3 px-4 text-gray-700 font-semibold">
+                            <SortableHeader field="query" className="text-left py-4 px-6 text-gray-700 font-semibold">
                               Query
                             </SortableHeader>
-                            <SortableHeader field="clicks" className="text-right py-3 px-4 text-gray-700 font-semibold">
+                            <SortableHeader field="clicks" className="text-right py-4 px-6 text-gray-700 font-semibold">
                               Clicks
                             </SortableHeader>
-                            <SortableHeader field="impressions" className="text-right py-3 px-4 text-gray-700 font-semibold">
+                            <SortableHeader field="impressions" className="text-right py-4 px-6 text-gray-700 font-semibold">
                               Impressions
                             </SortableHeader>
-                            <SortableHeader field="ctr" className="text-right py-3 px-4 text-gray-700 font-semibold">
+                            <SortableHeader field="ctr" className="text-right py-4 px-6 text-gray-700 font-semibold">
                               CTR
                             </SortableHeader>
-                            <SortableHeader field="position" className="text-right py-3 px-4 text-gray-700 font-semibold">
+                            <SortableHeader field="position" className="text-right py-4 px-6 text-gray-700 font-semibold">
                               Position
                             </SortableHeader>
-                            <th className="text-left py-3 px-4 text-gray-700 font-semibold">Countries</th>
+                            <th className="text-left py-4 px-6 text-gray-700 font-semibold">Countries</th>
                           </tr>
                         </thead>
                         <tbody>
                           {getSortedQueries().map((query) => (
-                            <tr key={`${query.siteUrl}-${query.query}`} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-3 px-4">
+                            <tr key={`${query.siteUrl}-${query.query}`} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                              <td className="py-4 px-6">
                                 <div className="flex items-center gap-3">
                                   <div 
                                     className="w-3 h-3 rounded-full" 
@@ -1545,7 +1683,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
       </div>
                               </td>
                               <td 
-                                className="py-3 px-4 font-medium max-w-xs cursor-pointer hover:bg-blue-50 rounded transition-colors"
+                                className="py-4 px-6 font-medium max-w-xs cursor-pointer hover:bg-blue-50 rounded transition-colors"
                                 onClick={() => setSelectedQuery({ query: query.query, siteUrl: query.siteUrl })}
                               >
                                 <div className="flex items-center gap-2">
@@ -1558,19 +1696,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                                   )}
                                 </div>
                               </td>
-                              <td className="text-right py-3 px-4 font-bold">
+                              <td className="text-right py-4 px-6 font-bold">
                                 {query.clicks.toLocaleString()}
                               </td>
-                              <td className="text-right py-3 px-4">
+                              <td className="text-right py-4 px-6">
                                 {query.impressions.toLocaleString()}
                               </td>
-                              <td className="text-right py-3 px-4">
+                              <td className="text-right py-4 px-6">
                                 {(query.ctr * 100).toFixed(1)}%
                               </td>
-                              <td className="text-right py-3 px-4">
+                              <td className="text-right py-4 px-6">
                                 {query.position.toFixed(1)}
                               </td>
-                              <td className="py-3 px-4">
+                              <td className="py-4 px-6">
                                 <div className="flex flex-wrap gap-1">
                                   {query.countries.map((country, countryIndex) => (
                                     <Badge 
@@ -1601,7 +1739,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                 </Card>
 
                 {/* Device Breakdown Comparison */}
-                <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                       <Smartphone className="h-5 w-5" />
@@ -1616,11 +1754,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                       <table className="w-full text-gray-900">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 px-4 text-gray-700 font-semibold">Website</th>
-                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">Desktop Clicks</th>
-                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">Mobile Clicks</th>
-                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">Tablet Clicks</th>
-                            <th className="text-right py-3 px-4 text-gray-700 font-semibold">Mobile %</th>
+                            <th className="text-left py-4 px-6 text-gray-700 font-semibold">Website</th>
+                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Desktop Clicks</th>
+                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Mobile Clicks</th>
+                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Tablet Clicks</th>
+                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Mobile %</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1635,8 +1773,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                             const mobilePercent = total > 0 ? (mobile / total * 100).toFixed(1) : '0';
                             
                             return (
-                              <tr key={siteUrl} className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-4 px-4">
+                              <tr key={siteUrl} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                                <td className="py-4 px-6">
                                   <div className="flex items-center gap-3">
                                     <div 
                                       className="w-3 h-3 rounded-full" 
@@ -1645,16 +1783,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                                     <span className="font-medium">{getSiteDisplayName(siteUrl)}</span>
                                   </div>
                                 </td>
-                                <td className="text-right py-4 px-4 font-bold">
+                                <td className="text-right py-4 px-6 font-bold">
                                   {desktop.toLocaleString()}
                                 </td>
-                                <td className="text-right py-4 px-4 font-bold">
+                                <td className="text-right py-4 px-6 font-bold">
                                   {mobile.toLocaleString()}
                                 </td>
-                                <td className="text-right py-4 px-4 font-bold">
+                                <td className="text-right py-4 px-6 font-bold">
                                   {tablet.toLocaleString()}
                                 </td>
-                                <td className="text-right py-4 px-4 font-bold">
+                                <td className="text-right py-4 px-6 font-bold">
                                   {mobilePercent}%
                                 </td>
                               </tr>
@@ -1717,8 +1855,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                 return (
                   <>
                     {/* Query Metrics Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                      <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between">
                             <div>
@@ -1732,7 +1870,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                         </CardContent>
                       </Card>
 
-                      <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                      <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between">
                             <div>
@@ -1746,7 +1884,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                         </CardContent>
                       </Card>
 
-                      <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                      <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between">
                             <div>
@@ -1760,7 +1898,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                         </CardContent>
                       </Card>
 
-                      <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                      <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                         <CardContent className="p-6">
                           <div className="flex items-center justify-between">
                             <div>
@@ -1777,7 +1915,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
 
                     {/* Country Performance for Query */}
                     {metrics?.countryBreakdown && metrics.countryBreakdown.length > 0 && (
-                      <Card className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                      <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
                         <CardHeader>
                           <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
                             <Globe className="h-5 w-5" />
@@ -1847,6 +1985,56 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
         </div>
       )}
 
+      {/* Right Sidebar - Comments Panel */}
+      {showCommentsPanel && (
+        <div className={`bg-white border-l border-gray-200 shadow-sm flex flex-col transition-all duration-300 ${
+          isRightPanelCollapsed ? 'w-16' : 'w-96'
+        }`}>
+          {/* Collapse/Expand Button */}
+          <div className="p-2 border-b border-gray-200">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsRightPanelCollapsed(!isRightPanelCollapsed)}
+              className="w-full"
+            >
+              {isRightPanelCollapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </Button>
+          </div>
+
+          {!isRightPanelCollapsed && (
+            <div className="flex-1 overflow-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    Комментарии
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCommentsPanel(false)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="mb-4">
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    {getSiteDisplayName(commentsSiteUrl)}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Добавляйте комментарии и заметки для этого сайта
+                  </p>
+                </div>
+
+                <Comments siteUrl={commentsSiteUrl} siteName={getSiteDisplayName(commentsSiteUrl)} />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {/* Add Account Modal */}
       {showAddAccountModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

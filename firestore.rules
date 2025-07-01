@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Правила для коллекции комментариев сайтов
+    match /site_comments/{commentId} {
+      // Чтение: пользователи могут читать все комментарии
+      allow read: if request.auth != null;
+      
+      // Создание: авторизованные пользователи могут создавать комментарии
+      allow create: if request.auth != null 
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userEmail == request.auth.token.email
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 2000
+        && request.resource.data.siteUrl is string
+        && request.resource.data.siteUrl.size() > 0
+        && request.resource.data.siteName is string
+        && request.resource.data.siteName.size() > 0
+        && request.resource.data.createdAt == request.time;
+      
+      // Обновление: только автор комментария или админ может редактировать
+      allow update: if request.auth != null 
+        && (resource.data.userId == request.auth.uid 
+            || request.auth.token.email == 'admin@example.com')
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 2000
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.isEdited == true;
+      
+      // Удаление: только автор комментария или админ может удалять
+      allow delete: if request.auth != null 
+        && (resource.data.userId == request.auth.uid 
+            || request.auth.token.email == 'admin@example.com');
+    }
+    
+    // Правила для других коллекций (если понадобятся в будущем)
+    match /{document=**} {
+      // По умолчанию запрещаем доступ к неопределенным коллекциям
+      allow read, write: if false;
+    }
+  }
+} 
