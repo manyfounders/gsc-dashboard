@@ -444,20 +444,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
             bValue = b.metrics.totalImpressions;
             break;
           case 'position':
-            aValue = a.metrics.averagePosition;
-            bValue = b.metrics.averagePosition;
+            // Для позиции инвертируем значения, так как меньшее значение = лучше
+            aValue = -a.metrics.averagePosition;
+            bValue = -b.metrics.averagePosition;
             break;
           default:
             aValue = a.metrics.totalClicks;
             bValue = b.metrics.totalClicks;
         }
         
-        // Для позиции - чем меньше, тем лучше
-        if (siteFilter === 'position') {
-          return aValue - bValue;
-        }
-        
-        // Для кликов и показов - чем больше, тем лучше
+        // Для всех параметров - сортировка по убыванию (лучшие показатели сверху)
         return bValue - aValue;
       })
       .map(item => item.site);
@@ -1418,7 +1414,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                         <div className="flex items-center gap-4">
                           <Checkbox 
                             checked={isSelected}
-                            className="border-gray-400 data-[state=checked]:bg-green-600"
+                            className="border-gray-400 data-[state=checked]:bg-green-600 flex-shrink-0"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleWebsiteToggle(site.siteUrl);
@@ -1439,62 +1435,64 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                             <p className="text-xs text-gray-500">{site.permissionLevel}</p>
                           </div>
                           
-                          {/* Метрики - горизонтальное расположение */}
-                          {metrics ? (
-                            <div className="flex items-center gap-6">
-                              <div className="text-center">
-                                <div className="text-xs text-gray-500 mb-1">Clicks</div>
-                                <div className="font-bold text-gray-900">{metrics.totalClicks.toLocaleString()}</div>
-                                {/* Тенденция кликов */}
-                                {(() => {
-                                  const trendData = getTrendData(metrics.dailyData);
-                                  return (
-                                    <div className="flex items-center justify-center gap-1 mt-1">
-                                      {trendData.trend === 'up' ? (
-                                        <TrendingUp className="h-3 w-3 text-green-600" />
-                                      ) : trendData.trend === 'down' ? (
-                                        <TrendingDown className="h-3 w-3 text-red-600" />
-                                      ) : null}
-                                      {trendData.change > 0 && (
-                                        <span className={`text-xs font-medium ${
-                                          trendData.trend === 'up' ? 'text-green-600' : 
-                                          trendData.trend === 'down' ? 'text-red-600' : 'text-gray-500'
-                                        }`}>
-                                          {trendData.change}%
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xs text-gray-500 mb-1">Impressions</div>
-                                <div className="font-bold text-gray-900">{metrics.totalImpressions.toLocaleString()}</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xs text-gray-500 mb-1">CTR</div>
-                                <div className="font-bold text-gray-900">{(metrics.averageCtr * 100).toFixed(1)}%</div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-6">
-                              <div className="text-center">
-                                <div className="text-xs text-gray-500 mb-1">Clicks</div>
-                                <div className="font-bold text-gray-400">--</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xs text-gray-500 mb-1">Impressions</div>
-                                <div className="font-bold text-gray-400">--</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="text-xs text-gray-500 mb-1">CTR</div>
-                                <div className="font-bold text-gray-400">--</div>
-                              </div>
-                            </div>
-                          )}
+                          {/* Метрики - горизонтальное расположение с фиксированной шириной */}
+                          <div className="flex items-center gap-6 flex-shrink-0">
+                            {metrics ? (
+                              <>
+                                <div className="text-center w-20">
+                                  <div className="text-xs text-gray-500 mb-1">Clicks</div>
+                                  <div className="font-bold text-gray-900">{metrics.totalClicks.toLocaleString()}</div>
+                                  {/* Тенденция кликов */}
+                                  {(() => {
+                                    const trendData = getTrendData(metrics.dailyData);
+                                    return (
+                                      <div className="flex items-center justify-center gap-1 mt-1">
+                                        {trendData.trend === 'up' ? (
+                                          <TrendingUp className="h-3 w-3 text-green-600" />
+                                        ) : trendData.trend === 'down' ? (
+                                          <TrendingDown className="h-3 w-3 text-red-600" />
+                                        ) : null}
+                                        {trendData.change > 0 && (
+                                          <span className={`text-xs font-medium ${
+                                            trendData.trend === 'up' ? 'text-green-600' : 
+                                            trendData.trend === 'down' ? 'text-red-600' : 'text-gray-500'
+                                          }`}>
+                                            {trendData.change}%
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                                <div className="text-center w-24">
+                                  <div className="text-xs text-gray-500 mb-1">Impressions</div>
+                                  <div className="font-bold text-gray-900">{metrics.totalImpressions.toLocaleString()}</div>
+                                </div>
+                                <div className="text-center w-16">
+                                  <div className="text-xs text-gray-500 mb-1">CTR</div>
+                                  <div className="font-bold text-gray-900">{(metrics.averageCtr * 100).toFixed(1)}%</div>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-center w-20">
+                                  <div className="text-xs text-gray-500 mb-1">Clicks</div>
+                                  <div className="font-bold text-gray-400">--</div>
+                                </div>
+                                <div className="text-center w-24">
+                                  <div className="text-xs text-gray-500 mb-1">Impressions</div>
+                                  <div className="font-bold text-gray-400">--</div>
+                                </div>
+                                <div className="text-center w-16">
+                                  <div className="text-xs text-gray-500 mb-1">CTR</div>
+                                  <div className="font-bold text-gray-400">--</div>
+                                </div>
+                              </>
+                            )}
+                          </div>
                           
-                          {/* Комментарии */}
-                          <div className="flex-shrink-0">
+                          {/* Комментарии с фиксированной шириной */}
+                          <div className="w-48 flex-shrink-0">
                             <CommentPreview 
                               siteUrl={site.siteUrl} 
                             />
