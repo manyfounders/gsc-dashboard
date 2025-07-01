@@ -156,11 +156,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     setSelectedWebsite('');
   };
 
-  const handleWebsiteSelect = async (siteUrl: string) => {
-    setSelectedWebsite(siteUrl);
-    await loadWebsiteMetrics(siteUrl, selectedCountry || undefined);
-  };
-
   const handleWebsiteClick = async (siteUrl: string) => {
     setCommentsSiteUrl(siteUrl);
     setShowCommentsPanel(true);
@@ -1502,7 +1497,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                           <div className="flex-shrink-0">
                             <CommentPreview 
                               siteUrl={site.siteUrl} 
-                              onViewComments={() => handleWebsiteClick(site.siteUrl)}
                             />
                           </div>
                         </div>

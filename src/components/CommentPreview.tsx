@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MessageSquare, Calendar, MessageCircle } from 'lucide-react';
+import { MessageSquare, Calendar } from 'lucide-react';
 import { commentsService, Comment } from '../services/commentsService';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -10,10 +9,9 @@ import { ru } from 'date-fns/locale';
 interface CommentPreviewProps {
   siteUrl: string;
   className?: string;
-  onViewComments?: () => void;
 }
 
-export const CommentPreview: React.FC<CommentPreviewProps> = ({ siteUrl, className, onViewComments }) => {
+export const CommentPreview: React.FC<CommentPreviewProps> = ({ siteUrl, className }) => {
   const [lastComment, setLastComment] = useState<Comment | null>(null);
   const [commentsCount, setCommentsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
