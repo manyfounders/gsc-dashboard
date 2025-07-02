@@ -7,13 +7,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, TrendingDown, Globe, RefreshCw, AlertCircle, BarChart3, Search, Smartphone, Table, MapPin, CalendarDays, Plus, X, MessageSquare, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, User, ArrowLeft, Mouse, Eye, Target, Loader2, ArrowUp } from 'lucide-react';
+import { TrendingUp, TrendingDown, Globe, RefreshCw, AlertCircle, Search, Smartphone, Table, MapPin, CalendarDays, Plus, X, MessageSquare, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, User, ArrowLeft, Mouse, Eye, Target, Loader2, ArrowUp } from 'lucide-react';
 import { useMultiAccountSearchConsole, getCountryFlag, getCountryName } from '../hooks/useMultiAccountSearchConsole';
 import { format } from 'date-fns';
 import { SiteCardSkeleton } from './Skeleton';
 import { Comments } from './Comments';
 import { CommentPreview } from './CommentPreview';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 
 // Импортируем countryData из хука
 const countryData: Record<string, { name: string; flag: string }> = {
@@ -156,11 +156,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
 
 
 
-  const handleWebsiteClick = async (siteUrl: string) => {
-    setCommentsSiteUrl(siteUrl);
-    setShowCommentsPanel(true);
-    setIsRightPanelCollapsed(false);
-  };
+
 
   const handleWebsiteToggle = async (siteUrl: string) => {
     const newSelected = selectedWebsites.includes(siteUrl)
