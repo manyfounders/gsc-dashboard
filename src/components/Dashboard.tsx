@@ -7,14 +7,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, TrendingDown, Mouse, Eye, Target, ArrowUp, Globe, RefreshCw, AlertCircle, Loader2, BarChart3, Search, Smartphone, Table, ArrowLeft, MapPin, Crown, CalendarDays, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Plus, User, X, MessageSquare } from 'lucide-react';
+import { TrendingUp, TrendingDown, Globe, RefreshCw, AlertCircle, BarChart3, Search, Smartphone, Table, MapPin, CalendarDays, Plus, X, MessageSquare, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, User, ArrowLeft, Mouse, Eye, Target, Loader2, ArrowUp } from 'lucide-react';
 import { useMultiAccountSearchConsole, getCountryFlag, getCountryName } from '../hooks/useMultiAccountSearchConsole';
 import { format } from 'date-fns';
 import { SiteCardSkeleton } from './Skeleton';
-import { QueryNetworkMap } from './QueryNetworkMap';
 import { Comments } from './Comments';
 import { CommentPreview } from './CommentPreview';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 
 // Импортируем countryData из хука
 const countryData: Record<string, { name: string; flag: string }> = {
@@ -96,9 +95,8 @@ interface GoogleTokenResponse {
 
 
 export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) => {
-  const [selectedWebsite, setSelectedWebsite] = useState<string>('');
+
   const [selectedWebsites, setSelectedWebsites] = useState<string[]>([]);
-  const [compareMode, setCompareMode] = useState(true);
   const [selectedQuery, setSelectedQuery] = useState<{ query: string; siteUrl: string } | null>(null);
   const [querySortField, setQuerySortField] = useState<'site' | 'query' | 'clicks' | 'impressions' | 'ctr' | 'position'>('clicks');
   const [querySortDirection, setQuerySortDirection] = useState<'asc' | 'desc'>('desc');
@@ -121,7 +119,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     error,
     sites,
     websiteMetrics,
-    overallAnalytics,
     selectedCountry,
     dateRange,
     loadingSites,
@@ -133,15 +130,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     refreshData
   } = useMultiAccountSearchConsole(connectedAccounts);
 
+  const [analyticsDialogOpen, setAnalyticsDialogOpen] = useState(false);
+  const [analyticsDialogSite, setAnalyticsDialogSite] = useState<string | null>(null);
+  const [analyticsDialogData, setAnalyticsDialogData] = useState<any>(null);
+  const [analyticsDialogLoading, setAnalyticsDialogLoading] = useState(false);
+
   useEffect(() => {
     loadSites();
   }, [loadSites]);
 
   useEffect(() => {
-    if (sites.length > 0 && (!selectedWebsite || selectedWebsite === '') && !compareMode) {
+    if (sites.length > 0) {
       loadOverallAnalytics();
     }
-  }, [sites, selectedWebsite, compareMode, loadOverallAnalytics]);
+  }, [sites, loadOverallAnalytics]);
 
   // Убираем автоматический выбор сайта, чтобы показывать общую аналитику
   // useEffect(() => {
@@ -152,9 +154,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
   //   }
   // }, [sites, selectedWebsite, compareMode, loadWebsiteMetrics, selectedCountry]);
 
-  const handleBackToAllSites = () => {
-    setSelectedWebsite('');
-  };
+
 
   const handleWebsiteClick = async (siteUrl: string) => {
     setCommentsSiteUrl(siteUrl);
@@ -182,42 +182,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     setSelectedCountry(newCountry);
     
     // Reload data with new country filter
-    if (selectedWebsite && !compareMode) {
-      loadWebsiteMetrics(selectedWebsite);
-    } else if (compareMode) {
-      selectedWebsites.forEach(siteUrl => {
-        loadWebsiteMetrics(siteUrl);
-      });
-    } else {
-      loadOverallAnalytics();
-    }
+    loadOverallAnalytics();
   };
 
   const handleDateRangeChange = (startDate: Date, endDate: Date) => {
     setDateRange({ startDate, endDate });
     
     // Reload data with new date range
-    if (selectedWebsite && !compareMode) {
-      loadWebsiteMetrics(selectedWebsite);
-    } else if (compareMode) {
-      selectedWebsites.forEach(siteUrl => {
-        loadWebsiteMetrics(siteUrl);
-      });
-    } else {
-      loadOverallAnalytics();
-    }
+    loadOverallAnalytics();
   };
 
-  const toggleCompareMode = () => {
-    setCompareMode(!compareMode);
-    if (!compareMode) {
-      // Entering compare mode - load metrics for selected sites
-      setSelectedWebsites([selectedWebsite]);
-    } else {
-      // Exiting compare mode
-      setSelectedWebsites([]);
-    }
-  };
+
 
   const getSiteDisplayName = (siteUrl: string) => {
     if (siteUrl.startsWith('sc-domain:')) {
@@ -261,17 +236,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     return colors[colorIndex];
   };
 
-  const formatChartData = (dailyData: Array<{ date: string; clicks: number; impressions: number; ctr: number; position: number }>) => {
-    return dailyData.map(day => ({
-      date: format(new Date(day.date), 'MMM dd'),
-      clicks: day.clicks,
-      impressions: day.impressions,
-      ctr: Math.round(day.ctr * 100) / 100,
-      position: Math.round(day.position * 10) / 10,
-    }));
-  };
 
-  const currentWebsiteMetrics = websiteMetrics.find(w => w.siteUrl === selectedWebsite);
 
   if (isLoading && sites.length === 0) {
     return (
@@ -336,7 +301,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     );
   }
 
-  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
+
 
   const handleQuerySort = (field: 'site' | 'query' | 'clicks' | 'impressions' | 'ctr' | 'position') => {
     if (querySortField === field) {
@@ -565,6 +530,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     </th>
   );
 
+  const handleOpenAnalyticsDialog = async (siteUrl: string) => {
+    setAnalyticsDialogSite(siteUrl);
+    setAnalyticsDialogOpen(true);
+    setAnalyticsDialogLoading(true);
+    try {
+      // Можно использовать getSiteMetricsWithDates или getSiteMetrics
+      const account = connectedAccounts[0];
+      const api = new (await import('../services/searchConsoleApi')).SearchConsoleApi({ accessToken: account.apiKey });
+      const data = await api.getSiteMetrics(siteUrl, 28);
+      // Для страниц (pages)
+      const pagesQuery = {
+        startDate: (new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+        endDate: (new Date()).toISOString().split('T')[0],
+        dimensions: ['page'] as ('page')[],
+        rowLimit: 20,
+      };
+      const pagesResp = await api.getSearchAnalytics(siteUrl, pagesQuery);
+      const topPages = (pagesResp.rows || []).map(row => ({
+        page: row.keys?.[0] || '',
+        clicks: row.clicks,
+        impressions: row.impressions,
+        ctr: row.ctr,
+        position: row.position,
+      }));
+      setAnalyticsDialogData({ ...data, topPages });
+    } catch (e) {
+      setAnalyticsDialogData(null);
+    }
+    setAnalyticsDialogLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Left Sidebar */}
@@ -585,50 +581,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
 
         {!isLeftPanelCollapsed && (
           <>
-            {/* Logo and Title */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <BarChart3 className="h-7 w-7 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">Search Console Analytics</h1>
-                  <p className="text-sm text-gray-600">
-                    {compareMode ? 'Advanced comparison mode' : 'Detailed performance insights'}
-                  </p>
-                  <p className="text-xs text-blue-600">
-                    {connectedAccounts.length} account{connectedAccounts.length !== 1 ? 's' : ''} connected
-                  </p>
-                </div>
-              </div>
-            </div>
-
             {/* Navigation */}
             <div className="p-6 space-y-4">
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Mode</h3>
-                <div className="space-y-2">
-                  {compareMode ? (
-                    <Button 
-                      onClick={toggleCompareMode} 
-                      variant="outline"
-                      className="w-full justify-start border-gray-300"
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Overview Mode
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={toggleCompareMode} 
-                      variant="outline"
-                      className="w-full justify-start border-gray-300"
-                    >
-                      <Table className="h-4 w-4 mr-2" />
-                      Compare Mode
-                    </Button>
-                  )}
-                </div>
-              </div>
 
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Connected Accounts</h3>
@@ -721,10 +675,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
 
         {/* Filters Row */}
         <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-6 flex-wrap">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 lg:gap-6 flex-wrap">
               {/* Country Filter */}
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full lg:w-auto">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-gray-600" />
                   <span className="font-medium text-gray-900">Country:</span>
@@ -733,7 +687,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                   value={selectedCountry || 'all'} 
                   onValueChange={handleCountryChange}
                 >
-                  <SelectTrigger className="text-xs border-gray-200">
+                  <SelectTrigger className="text-xs border-gray-200 w-full sm:w-auto">
                     <SelectValue placeholder="All Countries" />
                   </SelectTrigger>
                   <SelectContent>
@@ -756,1047 +710,437 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
               </div>
 
               {/* Date Range Filter */}
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full lg:w-auto">
                 <div className="flex items-center gap-2">
                   <CalendarDays className="h-5 w-5 text-gray-600" />
                   <span className="font-medium text-gray-900">Date Range:</span>
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="start-date" className="text-sm">From:</Label>
-                  <Input
-                    id="start-date"
-                    type="date"
-                    value={format(dateRange.startDate, 'yyyy-MM-dd')}
-                    onChange={(e) => {
-                      const start = new Date(e.target.value);
-                      const end = dateRange.endDate;
-                      if (start <= end) {
-                        handleDateRangeChange(start, end);
-                      }
-                    }}
-                    disabled={isLoading}
-                    className="w-auto border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="end-date" className="text-sm">To:</Label>
-                  <Input
-                    id="end-date"
-                    type="date"
-                    value={format(dateRange.endDate, 'yyyy-MM-dd')}
-                    onChange={(e) => {
-                      const start = dateRange.startDate;
-                      const end = new Date(e.target.value);
-                      if (start <= end) {
-                        handleDateRangeChange(start, end);
-                      }
-                    }}
-                    disabled={isLoading}
-                    className="w-auto border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
-                
-                <div className="flex gap-2">
-                  {[
-                    { label: 'Last 7 days', days: 7 },
-                    { label: 'Last 14 days', days: 14 },
-                    { label: 'Last 28 days', days: 28 },
-                    { label: 'Last 3 months', days: 90 },
-                  ].map((preset) => (
-                    <Button
-                      key={preset.days}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const end = new Date();
-                        const start = new Date();
-                        start.setDate(end.getDate() - preset.days);
-                        handleDateRangeChange(start, end);
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="start-date" className="text-sm whitespace-nowrap">From:</Label>
+                    <Input
+                      id="start-date"
+                      type="date"
+                      value={format(dateRange.startDate, 'yyyy-MM-dd')}
+                      onChange={(e) => {
+                        const start = new Date(e.target.value);
+                        const end = dateRange.endDate;
+                        if (start <= end) {
+                          handleDateRangeChange(start, end);
+                        }
                       }}
                       disabled={isLoading}
-                      className="text-xs border-gray-200 hover:bg-gray-50"
-                    >
-                      {preset.label}
-                    </Button>
-                  ))}
+                      className="w-full sm:w-auto border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="end-date" className="text-sm whitespace-nowrap">To:</Label>
+                    <Input
+                      id="end-date"
+                      type="date"
+                      value={format(dateRange.endDate, 'yyyy-MM-dd')}
+                      onChange={(e) => {
+                        const start = dateRange.startDate;
+                        const end = new Date(e.target.value);
+                        if (start <= end) {
+                          handleDateRangeChange(start, end);
+                        }
+                      }}
+                      disabled={isLoading}
+                      className="w-full sm:w-auto border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
+                {/* Select для пресетов дат */}
+                <Select
+                  onValueChange={(value) => {
+                    const end = new Date();
+                    const start = new Date();
+                    if (value === '7') start.setDate(end.getDate() - 7);
+                    else if (value === '14') start.setDate(end.getDate() - 14);
+                    else if (value === '28') start.setDate(end.getDate() - 28);
+                    else if (value === '90') start.setDate(end.getDate() - 90);
+                    handleDateRangeChange(start, end);
+                  }}
+                  value={(() => {
+                    const now = new Date();
+                    const diff = Math.round((now.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24));
+                    if (diff === 7) return '7';
+                    if (diff === 14) return '14';
+                    if (diff === 28) return '28';
+                    if (diff >= 85 && diff <= 92) return '90';
+                    return '';
+                  })()}
+                >
+                  <SelectTrigger className="w-44 text-xs border-gray-200">
+                    <SelectValue placeholder="Быстрый выбор" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Last 7 days</SelectItem>
+                    <SelectItem value="14">Last 14 days</SelectItem>
+                    <SelectItem value="28">Last 28 days</SelectItem>
+                    <SelectItem value="90">Last 3 months</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {!compareMode ? (
-          // Overview Mode (бывший Normal Dashboard Mode)
-          <>
-            {/* Overall Analytics Summary - shown before site selection */}
-            {overallAnalytics && (!selectedWebsite || selectedWebsite === '') && (
-              <>
-                {/* Overall Metrics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-gray-600 font-medium text-sm">Total Clicks</p>
-                          <p className="text-3xl font-bold text-gray-900">{overallAnalytics.totalClicks.toLocaleString()}</p>
-                        </div>
-                        <div className="p-3 bg-blue-100 rounded-lg">
-                          <Mouse className="h-8 w-8 text-blue-600" />
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">Across all sites</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-gray-600 font-medium text-sm">Total Impressions</p>
-                          <p className="text-3xl font-bold text-gray-900">{overallAnalytics.totalImpressions.toLocaleString()}</p>
-                        </div>
-                        <div className="p-3 bg-green-100 rounded-lg">
-                          <Eye className="h-8 w-8 text-green-600" />
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">Across all sites</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-gray-600 font-medium text-sm">Average CTR</p>
-                          <p className="text-3xl font-bold text-gray-900">{(overallAnalytics.averageCtr * 100).toFixed(1)}%</p>
-                        </div>
-                        <div className="p-3 bg-yellow-100 rounded-lg">
-                          <Target className="h-8 w-8 text-yellow-600" />
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">Across all sites</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-gray-600 font-medium text-sm">Average Position</p>
-                          <p className="text-3xl font-bold text-gray-900">{overallAnalytics.averagePosition.toFixed(1)}</p>
-                        </div>
-                        <div className="p-3 bg-purple-100 rounded-lg">
-                          <ArrowUp className="h-8 w-8 text-purple-600" />
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">Across all sites</p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Neural Query Network Map */}
-                <QueryNetworkMap 
-                  websiteMetrics={websiteMetrics} 
-                  isLoading={isLoading || websiteMetrics.length === 0} 
-                />
-
-                {/* Top Performers Row */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                  {/* Top Sites */}
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+        {/* Site Selection for Compare Mode */}
+        <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
           <CardHeader>
-                      <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
-                        <Crown className="h-5 w-5 text-yellow-600" />
-                        Top Performing Sites
-                      </CardTitle>
-                      <CardDescription className="text-gray-600">
-                        Best sites by total clicks
-                      </CardDescription>
+            <CardTitle className="text-2xl text-gray-900 flex items-center gap-3">
+              <Table className="h-6 w-6" />
+              Compare Websites
+              <Badge className="bg-green-100 text-green-800 border-green-200">
+                Compare Mode
+              </Badge>
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              Select multiple websites to compare all metrics in detail
+            </CardDescription>
           </CardHeader>
           <CardContent>
-                      <div className="space-y-3">
-                        {overallAnalytics.topSites.slice(0, 5).map((site, index) => (
-                          <div key={site.siteUrl} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Badge className={index < 3 ? "bg-yellow-100 text-yellow-800" : "bg-gray-100 text-gray-700"}>
-                                #{index + 1}
-                              </Badge>
-                              <div>
-                                <p className="font-medium text-gray-900 text-sm">{getSiteDisplayName(site.siteUrl)}</p>
-                                <p className="text-xs text-gray-500">{(site.ctr * 100).toFixed(1)}% CTR</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-gray-900">{site.clicks.toLocaleString()}</p>
-                              <p className="text-xs text-gray-500">clicks</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Top Queries */}
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-                      <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
-                        <Search className="h-5 w-5 text-blue-600" />
-                        Top Performing Queries
-                      </CardTitle>
-                      <CardDescription className="text-gray-600">
-                        Best queries across all sites
-                      </CardDescription>
-          </CardHeader>
-          <CardContent>
-                      <div className="space-y-3">
-                                                 {overallAnalytics.topQueries.slice(0, 5).map((query, index) => (
-                           <div key={`${query.query}-${query.siteUrl}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                             <div className="flex items-center gap-3">
-                               <Badge className={index < 3 ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-700"}>
-                                 #{index + 1}
-                               </Badge>
-                               <div className="min-w-0 flex-1">
-                                 <div className="flex items-center gap-2 mb-1">
-                                   <p className="font-medium text-gray-900 text-sm truncate">{query.query}</p>
-                                   {selectedCountry && (
-                                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                                       <MapPin className="h-3 w-3 mr-1" />
-                                       {selectedCountry.toUpperCase()}
-                                     </Badge>
-                                   )}
-                                 </div>
-                                 <p className="text-xs text-gray-500">{getSiteDisplayName(query.siteUrl)}</p>
-                               </div>
-                             </div>
-                             <div className="text-right">
-                               <p className="font-bold text-gray-900">{query.clicks.toLocaleString()}</p>
-                               <p className="text-xs text-gray-500">clicks</p>
-                             </div>
-                           </div>
-                         ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Top Countries */}
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
-                        <MapPin className="h-5 w-5 text-green-600" />
-                        Top Countries
-                      </CardTitle>
-                      <CardDescription className="text-gray-600">
-                        Best performing locations
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {overallAnalytics.topCountries.slice(0, 5).map((country, index) => (
-                          <div key={country.country} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <Badge className={index < 3 ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}>
-                                #{index + 1}
-                              </Badge>
-                              <div>
-                                <p className="font-medium text-gray-900 text-sm">{country.countryName}</p>
-                                <p className="text-xs text-gray-500">Pos. {country.position.toFixed(1)}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-gray-900">{country.clicks.toLocaleString()}</p>
-                              <p className="text-xs text-gray-500">clicks</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+            {/* Фильтр и кнопка "Показать все" */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">Сортировка по:</span>
+                  <Select value={siteFilter} onValueChange={(value: 'clicks' | 'impressions' | 'position') => setSiteFilter(value)}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="clicks">Кликам</SelectItem>
+                      <SelectItem value="impressions">Показам</SelectItem>
+                      <SelectItem value="position">Позиции</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </>
-            )}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAllSites(!showAllSites)}
+                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+              >
+                {showAllSites ? 'Скрыть' : 'Показать все'}
+              </Button>
+            </div>
 
-
-
-            {/* Detailed Analytics for Selected Site */}
-            {currentWebsiteMetrics && (
-              <>
-                {/* Back Button */}
-                <div className="mb-6">
-                  <Button
-                    variant="outline"
-                    onClick={handleBackToAllSites}
-                    className="flex items-center gap-2"
+            <div className="space-y-4">
+              {getSortedSites().slice(0, showAllSites ? undefined : 5).map((site) => {
+                const isSelected = selectedWebsites.includes(site.siteUrl);
+                const metrics = websiteMetrics.find(w => w.siteUrl === site.siteUrl);
+                const isLoading = loadingSites.has(site.siteUrl);
+                
+                if (isLoading) {
+                  return <SiteCardSkeleton key={site.siteUrl} />;
+                }
+                
+                return (
+                  <div 
+                    key={site.siteUrl} 
+                    className={`p-3 sm:p-4 rounded-lg transition-all duration-200 cursor-pointer hover:bg-gray-50 ${
+                      isSelected 
+                        ? 'bg-blue-50' 
+                        : 'bg-white'
+                    }`}
                   >
-                    <ArrowLeft className="h-4 w-4" />
-                    Назад к списку сайтов
-                  </Button>
-                </div>
-
-                {/* Site Title */}
-                <div className="mb-6">
-                  <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                    <Globe className="h-6 w-6 text-blue-600" />
-                    {getSiteDisplayName(selectedWebsite)}
-                  </h1>
-                  <p className="text-gray-600 mt-1">Детальная аналитика и комментарии</p>
-                </div>
-
-                {/* Key Metrics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                          <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                              <div>
-                          <p className="text-gray-600 font-medium text-sm">Total Clicks</p>
-                          <p className="text-3xl font-bold text-gray-900">{currentWebsiteMetrics.totalClicks.toLocaleString()}</p>
-                              </div>
-                        <div className="p-3 bg-blue-100 rounded-lg">
-                              <Mouse className="h-8 w-8 text-blue-600" />
-                            </div>
-                      </div>
-                      <div className="flex items-center mt-3">
-                              {currentWebsiteMetrics.trend === 'up' ? (
-                                <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-                              ) : currentWebsiteMetrics.trend === 'down' ? (
-                                <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
-                              ) : null}
-                              <span className={`text-sm font-medium ${
-                                currentWebsiteMetrics.trend === 'up' ? 'text-green-600' : 
-                          currentWebsiteMetrics.trend === 'down' ? 'text-red-600' : 'text-gray-500'
-                              }`}>
-                                {currentWebsiteMetrics.change > 0 ? '+' : ''}{currentWebsiteMetrics.change}%
-                              </span>
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                          <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                              <div>
-                          <p className="text-gray-600 font-medium text-sm">Total Impressions</p>
-                          <p className="text-3xl font-bold text-gray-900">{currentWebsiteMetrics.totalImpressions.toLocaleString()}</p>
-                              </div>
-                        <div className="p-3 bg-green-100 rounded-lg">
-                          <Eye className="h-8 w-8 text-green-600" />
-                              </div>
-                            </div>
-                            <div className="flex items-center mt-3">
-                              {currentWebsiteMetrics.trend === 'up' ? (
-                                <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-                              ) : currentWebsiteMetrics.trend === 'down' ? (
-                                <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
-                              ) : null}
-                              <span className={`text-sm font-medium ${
-                                currentWebsiteMetrics.trend === 'up' ? 'text-green-600' : 
-                                currentWebsiteMetrics.trend === 'down' ? 'text-red-600' : 'text-gray-500'
-                              }`}>
-                                {currentWebsiteMetrics.change > 0 ? '+' : ''}{currentWebsiteMetrics.change}%
-                              </span>
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                          <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                              <div>
-                          <p className="text-gray-600 font-medium text-sm">Average CTR</p>
-                          <p className="text-3xl font-bold text-gray-900">{(currentWebsiteMetrics.averageCtr * 100).toFixed(1)}%</p>
-                              </div>
-                        <div className="p-3 bg-yellow-100 rounded-lg">
-                          <Target className="h-8 w-8 text-yellow-600" />
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                          <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                              <div>
-                          <p className="text-gray-600 font-medium text-sm">Average Position</p>
-                          <p className="text-3xl font-bold text-gray-900">{currentWebsiteMetrics.averagePosition.toFixed(1)}</p>
-                              </div>
-                        <div className="p-3 bg-purple-100 rounded-lg">
-                              <ArrowUp className="h-8 w-8 text-purple-600" />
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                      <Checkbox 
+                        checked={isSelected}
+                        className="border-gray-400 data-[state=checked]:bg-green-600 flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleWebsiteToggle(site.siteUrl);
+                        }}
+                      />
+                      
+                      {/* Название сайта и уровень доступа */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div 
+                            className="w-3 h-3 rounded-full flex-shrink-0" 
+                            style={{ backgroundColor: getPerformanceColor(site.siteUrl) }}
+                          />
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            className="font-semibold truncate text-blue-600 hover:text-violet-600 underline underline-offset-2 transition-colors duration-150 cursor-pointer"
+                            onClick={e => { e.stopPropagation(); handleOpenAnalyticsDialog(site.siteUrl); }}
+                            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpenAnalyticsDialog(site.siteUrl); } }}
+                          >
+                            {getSiteDisplayName(site.siteUrl)}
+                          </span>
+                          <button
+                            type="button"
+                            title="Комментарии к сайту"
+                            className="ml-1 p-1 rounded hover:bg-gray-100 transition-colors"
+                            onClick={e => { e.stopPropagation(); setCommentsSiteUrl(site.siteUrl); setShowCommentsPanel(true); setIsRightPanelCollapsed(false); }}
+                          >
+                            <MessageSquare className="h-4 w-4 text-gray-400 hover:text-blue-500" />
+                          </button>
                         </div>
-                            </div>
-                          </CardContent>
-                        </Card>
+                        <p className="text-xs text-gray-500">{site.permissionLevel}</p>
                       </div>
-
-                      {/* Charts Row */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                          <CardHeader>
-                      <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
-                        <BarChart3 className="h-5 w-5" />
-                        Clicks & Impressions Trend
-                      </CardTitle>
-                      <CardDescription className="text-gray-600">
-                        Daily performance over the last 28 days
-                      </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <BarChart data={formatChartData(currentWebsiteMetrics.dailyData)}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 12 }} />
-                          <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'white', 
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '8px',
-                              color: '#374151'
-                            }} 
-                          />
-                          <Bar dataKey="clicks" fill="#3B82F6" name="Clicks" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="impressions" fill="#10B981" name="Impressions" radius={[4, 4, 0, 0]} />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </CardContent>
-                        </Card>
-
-                  <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                          <CardHeader>
-                      <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
-                        <TrendingUp className="h-5 w-5" />
-                        CTR & Position Trend
-                      </CardTitle>
-                      <CardDescription className="text-gray-600">
-                        Click-through rate and average position
-                      </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <ResponsiveContainer width="100%" height={300}>
-                              <LineChart data={formatChartData(currentWebsiteMetrics.dailyData)}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                          <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 12 }} />
-                          <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'white', 
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '8px',
-                              color: '#374151'
-                            }} 
-                          />
-                          <Line type="monotone" dataKey="ctr" stroke="#F59E0B" strokeWidth={2} name="CTR %" />
-                                <Line type="monotone" dataKey="position" stroke="#8B5CF6" strokeWidth={2} name="Avg Position" />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </CardContent>
-                        </Card>
-                      </div>
-
-                      {/* Bottom Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                  <Card className="lg:col-span-2 border-gray-200 shadow-sm">
-                          <CardHeader>
-                      <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
-                        <Search className="h-5 w-5" />
-                        Top Performing Queries
-                      </CardTitle>
-                      <CardDescription className="text-gray-600">
-                        Your best search queries by clicks
-                      </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-4">
-                        {currentWebsiteMetrics.topQueries.slice(0, 8).map((query, index) => (
-                          <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="font-medium text-gray-900 truncate">{query.query}</p>
-                                {selectedCountry && (
-                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                                    <MapPin className="h-3 w-3 mr-1" />
-                                    {selectedCountry.toUpperCase()}
-                                  </Badge>
-                                )}
-                                    </div>
-                              <div className="flex items-center space-x-6 mt-2 text-sm text-gray-600">
-                                <span className="flex items-center gap-1">
-                                  <Mouse className="h-3 w-3" />
-                                  {query.clicks}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Eye className="h-3 w-3" />
-                                  {query.impressions.toLocaleString()}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Target className="h-3 w-3" />
-                                  {(query.ctr * 100).toFixed(1)}%
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <ArrowUp className="h-3 w-3" />
-                                  {query.position.toFixed(1)}
-                                </span>
+                      
+                      {/* Метрики - горизонтальное расположение с фиксированной шириной */}
+                      <div className="flex items-center gap-4 lg:gap-6 flex-shrink-0">
+                        {metrics ? (
+                          <>
+                            <div className="text-center w-16 lg:w-20">
+                              <div className="text-xs text-gray-500 mb-1">Clicks</div>
+                              <div className="font-bold text-gray-900">{metrics.totalClicks.toLocaleString()}</div>
+                              {/* Тенденция кликов */}
+                              {(() => {
+                                const trendData = getTrendData(metrics.dailyData);
+                                return (
+                                  <div className="flex items-center justify-center gap-1 mt-1">
+                                    {trendData.trend === 'up' ? (
+                                      <TrendingUp className="h-3 w-3 text-green-600" />
+                                    ) : trendData.trend === 'down' ? (
+                                      <TrendingDown className="h-3 w-3 text-red-600" />
+                                    ) : null}
+                                    {trendData.change > 0 && (
+                                      <span className={`text-xs font-medium ${
+                                        trendData.trend === 'up' ? 'text-green-600' : 
+                                        trendData.trend === 'down' ? 'text-red-600' : 'text-gray-500'
+                                      }`}>
+                                        {trendData.change}%
+                                      </span>
+                                    )}
                                   </div>
-                                  </div>
-                            <Badge 
-                              variant={index < 3 ? "default" : "secondary"}
-                              className={index < 3 ? "bg-blue-100 text-blue-800 border-blue-200" : "bg-gray-100 text-gray-700"}
-                            >
-                                    #{index + 1}
-                                  </Badge>
-                                </div>
-                              ))}
+                                );
+                              })()}
                             </div>
-                          </CardContent>
-                        </Card>
+                            <div className="text-center w-20 lg:w-24">
+                              <div className="text-xs text-gray-500 mb-1">Impressions</div>
+                              <div className="font-bold text-gray-900">{metrics.totalImpressions.toLocaleString()}</div>
+                            </div>
+                            <div className="text-center w-14 lg:w-16">
+                              <div className="text-xs text-gray-500 mb-1">CTR</div>
+                              <div className="font-bold text-gray-900">{(metrics.averageCtr * 100).toFixed(1)}%</div>
+                            </div>
+                            <div className="text-center w-16 lg:w-20">
+                              <div className="text-xs text-gray-500 mb-1">Position</div>
+                              <div className="font-bold text-gray-900">{metrics.averagePosition.toFixed(1)}</div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-center w-16 lg:w-20">
+                              <div className="text-xs text-gray-500 mb-1">Clicks</div>
+                              <div className="font-bold text-gray-400">--</div>
+                            </div>
+                            <div className="text-center w-20 lg:w-24">
+                              <div className="text-xs text-gray-500 mb-1">Impressions</div>
+                              <div className="font-bold text-gray-400">--</div>
+                            </div>
+                            <div className="text-center w-14 lg:w-16">
+                              <div className="text-xs text-gray-500 mb-1">CTR</div>
+                              <div className="font-bold text-gray-400">--</div>
+                            </div>
+                            <div className="text-center w-16 lg:w-20">
+                              <div className="text-xs text-gray-500 mb-1">Position</div>
+                              <div className="font-bold text-gray-400">--</div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      
+                      {/* Комментарии с фиксированной шириной */}
+                      <div className="w-48 flex-shrink-0">
+                        <CommentPreview 
+                          siteUrl={site.siteUrl} 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {/* Индикатор скрытых сайтов */}
+              {!showAllSites && getSortedSites().length > 5 && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="text-center text-sm text-gray-600">
+                    Показано 5 из {getSortedSites().length} сайтов. 
+                    <Button
+                      variant="link"
+                      size="sm"
+                      onClick={() => setShowAllSites(true)}
+                      className="text-blue-600 hover:text-blue-700 p-0 h-auto ml-1"
+                    >
+                      Показать все
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-                  <Card className="border-gray-200 shadow-sm">
-                          <CardHeader>
-                      <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
-                        <MapPin className="h-5 w-5" />
-                        Country Breakdown
-                      </CardTitle>
-                      <CardDescription className="text-gray-600">
-                        Traffic distribution by country
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {currentWebsiteMetrics.countryBreakdown.slice(0, 8).map((country, index) => (
-                          <div key={country.country} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                            <div className="flex items-center gap-3">
-                              <Badge className={index < 3 ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}>
-                                #{index + 1}
-                              </Badge>
-                              <div>
-                                <p className="font-medium text-gray-900 text-sm">{country.countryName}</p>
-                                <p className="text-xs text-gray-500">{(country.ctr * 100).toFixed(1)}% CTR • Pos. {country.position.toFixed(1)}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-gray-900">{country.clicks.toLocaleString()}</p>
-                              <p className="text-xs text-gray-500">{country.impressions.toLocaleString()} imp</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-gray-200 shadow-sm">
-                          <CardHeader>
-                      <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
-                        <Smartphone className="h-5 w-5" />
-                        Device Breakdown
-                      </CardTitle>
-                      <CardDescription className="text-gray-600">
-                        Traffic distribution by device
-                      </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <ResponsiveContainer width="100%" height={250}>
-                              <PieChart>
-                                <Pie
-                            data={currentWebsiteMetrics.deviceBreakdown.map((device, index) => ({
-                              name: device.device.charAt(0).toUpperCase() + device.device.slice(1),
-                              value: device.clicks,
-                              fill: colors[index % colors.length]
-                            }))}
-                                  cx="50%"
-                                  cy="50%"
-                            innerRadius={60}
-                            outerRadius={100}
-                            paddingAngle={5}
-                                  dataKey="value"
-                                >
-                            {currentWebsiteMetrics.deviceBreakdown.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                                  ))}
-                                </Pie>
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'white', 
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '8px',
-                              color: '#374151'
-                            }} 
-                          />
-                              </PieChart>
-                            </ResponsiveContainer>
-                      <div className="space-y-2 mt-4">
-                        {currentWebsiteMetrics.deviceBreakdown.map((device, index) => (
-                          <div key={device.device} className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full" 
-                                style={{ backgroundColor: colors[index % colors.length] }}
-                              />
-                              <span className="text-gray-700 capitalize">{device.device}</span>
-                            </div>
-                            <span className="font-medium text-gray-900">{device.clicks.toLocaleString()}</span>
-                          </div>
-                        ))}
-                      </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-              </>
-            )}
-                    </>
-                  ) : (
-          // Compare Mode
+        {/* Comparison Tables */}
+        {selectedWebsites.length > 0 && (
           <>
-            {/* Date Range Picker for Compare Mode - REMOVED (duplicate functionality) */}
-
-            {/* Site Selection for Compare Mode */}
+            {/* Top Queries Comparison */}
             <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-2xl text-gray-900 flex items-center gap-3">
-                  <Table className="h-6 w-6" />
-                  Compare Websites
-                  <Badge className="bg-green-100 text-green-800 border-green-200">
-                    Compare Mode
-                  </Badge>
+                <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
+                  <Search className="h-5 w-5" />
+                  Top Queries Comparison
                 </CardTitle>
                 <CardDescription className="text-gray-600">
-                  Select multiple websites to compare all metrics in detail
+                  All top performing queries across selected websites (click headers to sort)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Фильтр и кнопка "Показать все" */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-700">Сортировка по:</span>
-                      <Select value={siteFilter} onValueChange={(value: 'clicks' | 'impressions' | 'position') => setSiteFilter(value)}>
-                        <SelectTrigger className="w-40">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="clicks">Кликам</SelectItem>
-                          <SelectItem value="impressions">Показам</SelectItem>
-                          <SelectItem value="position">Позиции</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowAllSites(!showAllSites)}
-                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                  >
-                    {showAllSites ? 'Скрыть' : 'Показать все'}
-                  </Button>
-                </div>
-
-                <div className="space-y-4">
-                  {getSortedSites().slice(0, showAllSites ? undefined : 5).map((site) => {
-                    const isSelected = selectedWebsites.includes(site.siteUrl);
-                    const metrics = websiteMetrics.find(w => w.siteUrl === site.siteUrl);
-                    const isLoading = loadingSites.has(site.siteUrl);
-                    
-                    if (isLoading) {
-                      return <SiteCardSkeleton key={site.siteUrl} />;
-                    }
-                    
-                    return (
-                      <div 
-                        key={site.siteUrl} 
-                        className={`p-4 rounded-xl border transition-all duration-200 cursor-pointer hover:bg-gray-100 ${
-                          isSelected 
-                            ? 'bg-green-50 border-green-200 shadow-md' 
-                            : 'bg-gray-50 border-gray-200'
-                        }`}
-                        onClick={() => handleWebsiteClick(site.siteUrl)}
-                      >
-                        <div className="flex items-center gap-4">
-                          <Checkbox 
-                            checked={isSelected}
-                            className="border-gray-400 data-[state=checked]:bg-green-600 flex-shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleWebsiteToggle(site.siteUrl);
-                            }}
-                          />
-                          
-                          {/* Название сайта и уровень доступа */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-gray-900 text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50/50">
+                        <SortableHeader field="site" className="text-left py-4 px-6 text-gray-700 font-semibold">
+                          Site
+                        </SortableHeader>
+                        <SortableHeader field="query" className="text-left py-4 px-6 text-gray-700 font-semibold">
+                          Query
+                        </SortableHeader>
+                        <SortableHeader field="clicks" className="text-right py-4 px-6 text-gray-700 font-semibold">
+                          Clicks
+                        </SortableHeader>
+                        <SortableHeader field="impressions" className="text-right py-4 px-6 text-gray-700 font-semibold">
+                          Impressions
+                        </SortableHeader>
+                        <SortableHeader field="ctr" className="text-right py-4 px-6 text-gray-700 font-semibold">
+                          CTR
+                        </SortableHeader>
+                        <SortableHeader field="position" className="text-right py-4 px-6 text-gray-700 font-semibold">
+                          Position
+                        </SortableHeader>
+                        <th className="text-left py-4 px-6 text-gray-700 font-semibold">Countries</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getSortedQueries().map((query) => (
+                        <tr key={`${query.query}-${query.siteUrl}`} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-3">
                               <div 
-                                className="w-3 h-3 rounded-full flex-shrink-0" 
-                                style={{ backgroundColor: getPerformanceColor(site.siteUrl) }}
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: getPerformanceColor(query.siteUrl) }}
                               />
-                              <h3 className="font-semibold text-gray-900 truncate">
-                                {getSiteDisplayName(site.siteUrl)}
-                              </h3>
+                              <span className="font-medium">{query.siteName}</span>
                             </div>
-                            <p className="text-xs text-gray-500">{site.permissionLevel}</p>
-                          </div>
-                          
-                          {/* Метрики - горизонтальное расположение с фиксированной шириной */}
-                          <div className="flex items-center gap-6 flex-shrink-0">
-                            {metrics ? (
-                              <>
-                                <div className="text-center w-20">
-                                  <div className="text-xs text-gray-500 mb-1">Clicks</div>
-                                  <div className="font-bold text-gray-900">{metrics.totalClicks.toLocaleString()}</div>
-                                  {/* Тенденция кликов */}
-                                  {(() => {
-                                    const trendData = getTrendData(metrics.dailyData);
-                                    return (
-                                      <div className="flex items-center justify-center gap-1 mt-1">
-                                        {trendData.trend === 'up' ? (
-                                          <TrendingUp className="h-3 w-3 text-green-600" />
-                                        ) : trendData.trend === 'down' ? (
-                                          <TrendingDown className="h-3 w-3 text-red-600" />
-                                        ) : null}
-                                        {trendData.change > 0 && (
-                                          <span className={`text-xs font-medium ${
-                                            trendData.trend === 'up' ? 'text-green-600' : 
-                                            trendData.trend === 'down' ? 'text-red-600' : 'text-gray-500'
-                                          }`}>
-                                            {trendData.change}%
-                                          </span>
-                                        )}
-                                      </div>
-                                    );
-                                  })()}
-                                </div>
-                                <div className="text-center w-24">
-                                  <div className="text-xs text-gray-500 mb-1">Impressions</div>
-                                  <div className="font-bold text-gray-900">{metrics.totalImpressions.toLocaleString()}</div>
-                                </div>
-                                <div className="text-center w-16">
-                                  <div className="text-xs text-gray-500 mb-1">CTR</div>
-                                  <div className="font-bold text-gray-900">{(metrics.averageCtr * 100).toFixed(1)}%</div>
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <div className="text-center w-20">
-                                  <div className="text-xs text-gray-500 mb-1">Clicks</div>
-                                  <div className="font-bold text-gray-400">--</div>
-                                </div>
-                                <div className="text-center w-24">
-                                  <div className="text-xs text-gray-500 mb-1">Impressions</div>
-                                  <div className="font-bold text-gray-400">--</div>
-                                </div>
-                                <div className="text-center w-16">
-                                  <div className="text-xs text-gray-500 mb-1">CTR</div>
-                                  <div className="font-bold text-gray-400">--</div>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                          
-                          {/* Комментарии с фиксированной шириной */}
-                          <div className="w-48 flex-shrink-0">
-                            <CommentPreview 
-                              siteUrl={site.siteUrl} 
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  
-                  {/* Индикатор скрытых сайтов */}
-                  {!showAllSites && getSortedSites().length > 5 && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="text-center text-sm text-gray-600">
-                        Показано 5 из {getSortedSites().length} сайтов. 
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() => setShowAllSites(true)}
-                          className="text-blue-600 hover:text-blue-700 p-0 h-auto ml-1"
-                        >
-                          Показать все
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{query.query}</p>
+                            </div>
+                          </td>
+                          <td className="text-right py-4 px-6 font-bold">
+                            {query.clicks.toLocaleString()}
+                          </td>
+                          <td className="text-right py-4 px-6">
+                            {query.impressions.toLocaleString()}
+                          </td>
+                          <td className="text-right py-4 px-6">
+                            {(query.ctr * 100).toFixed(2)}%
+                          </td>
+                          <td className="text-right py-4 px-6">
+                            {query.position.toFixed(1)}
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex flex-wrap gap-1">
+                              {query.countries.map((country, countryIndex) => (
+                                <Badge 
+                                  key={country.country}
+                                  variant="outline" 
+                                  className={`text-xs ${
+                                    countryIndex === 0 ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                    'bg-green-50 text-green-700 border-green-200'
+                                  }`}
+                                >
+                                  <span className="mr-1">{country.flag}</span>
+                                  {country.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Comparison Tables */}
-            {selectedWebsites.length > 0 && (
-              <>
-                {/* Overall Metrics Comparison */}
-                <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
-                      <BarChart3 className="h-5 w-5" />
-                      Overall Performance Comparison
-                    </CardTitle>
-                    <CardDescription className="text-gray-600">
-                      Compare key metrics across selected websites
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-gray-900">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-4 px-6 text-gray-700 font-semibold">Website</th>
-                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Total Clicks</th>
-                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Total Impressions</th>
-                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Average CTR</th>
-                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Average Position</th>
-                            <th className="text-left py-4 px-6 text-gray-700 font-semibold">Top Countries</th>
-                            <th className="text-center py-4 px-6 text-gray-700 font-semibold">Trend</th>
+            {/* Device Breakdown Comparison */}
+            <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
+                  <Smartphone className="h-5 w-5" />
+                  Device Performance Comparison
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Traffic breakdown by device type across selected websites
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-gray-900">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-4 px-6 text-gray-700 font-semibold">Website</th>
+                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">Desktop</th>
+                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">Mobile</th>
+                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">Tablet</th>
+                        <th className="text-right py-4 px-6 text-gray-700 font-semibold">Mobile %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedWebsites.map((siteUrl) => {
+                        const metrics = websiteMetrics.find(w => w.siteUrl === siteUrl);
+                        if (!metrics) return null;
+                        
+                        const desktop = metrics.deviceBreakdown.find(d => d.device === 'desktop')?.clicks || 0;
+                        const mobile = metrics.deviceBreakdown.find(d => d.device === 'mobile')?.clicks || 0;
+                        const tablet = metrics.deviceBreakdown.find(d => d.device === 'tablet')?.clicks || 0;
+                        const total = desktop + mobile + tablet;
+                        const mobilePercent = total > 0 ? Math.round((mobile / total) * 100) : 0;
+                        
+                        return (
+                          <tr key={siteUrl} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                            <td className="py-4 px-6">
+                              <div className="flex items-center gap-3">
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: getPerformanceColor(siteUrl) }}
+                                />
+                                <span className="font-medium">{getSiteDisplayName(siteUrl)}</span>
+                              </div>
+                            </td>
+                            <td className="text-right py-4 px-6 font-bold">
+                              {desktop.toLocaleString()}
+                            </td>
+                            <td className="text-right py-4 px-6 font-bold">
+                              {mobile.toLocaleString()}
+                            </td>
+                            <td className="text-right py-4 px-6 font-bold">
+                              {tablet.toLocaleString()}
+                            </td>
+                            <td className="text-right py-4 px-6 font-bold">
+                              {mobilePercent}%
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {selectedWebsites.map((siteUrl) => {
-                            const metrics = websiteMetrics.find(w => w.siteUrl === siteUrl);
-                            if (!metrics) return null;
-                            
-                            return (
-                              <tr key={siteUrl} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                                <td className="py-4 px-6">
-                                  <div className="flex items-center gap-3">
-                                    <div 
-                                      className="w-3 h-3 rounded-full" 
-                                      style={{ backgroundColor: getPerformanceColor(siteUrl) }}
-                                    />
-                                    <span className="font-medium">{getSiteDisplayName(siteUrl)}</span>
-                                  </div>
-                                </td>
-                                <td className="text-right py-4 px-6 font-bold">
-                                  {metrics.totalClicks.toLocaleString()}
-                                </td>
-                                <td className="text-right py-4 px-6 font-bold">
-                                  {metrics.totalImpressions.toLocaleString()}
-                                </td>
-                                <td className="text-right py-4 px-6 font-bold">
-                                  {(metrics.averageCtr * 100).toFixed(2)}%
-                                </td>
-                                <td className="text-right py-4 px-6 font-bold">
-                                  {metrics.averagePosition.toFixed(1)}
-                                </td>
-                                <td className="py-4 px-6">
-                                  <div className="flex flex-wrap gap-1">
-                                    {metrics.countryBreakdown.slice(0, 3).map((country, index) => (
-                                      <Badge 
-                                        key={country.country}
-                                        variant="outline" 
-                                        className={`text-xs ${
-                                          index === 0 ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                          index === 1 ? 'bg-green-50 text-green-700 border-green-200' :
-                                          'bg-purple-50 text-purple-700 border-purple-200'
-                                        }`}
-                                      >
-                                        <span className="mr-1">{getCountryFlag(country.country)}</span>
-                                        {getCountryName(country.country)}
-                                      </Badge>
-                                    ))}
-                                    {metrics.countryBreakdown.length > 3 && (
-                                      <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600">
-                                        +{metrics.countryBreakdown.length - 3}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="text-center py-4 px-6">
-                                  <div className="flex items-center justify-center gap-1">
-                                    {metrics.trend === 'up' ? (
-                                      <TrendingUp className="h-4 w-4 text-green-600" />
-                                    ) : metrics.trend === 'down' ? (
-                                      <TrendingDown className="h-4 w-4 text-red-600" />
-                                    ) : null}
-                                    <span className={`text-sm font-medium ${
-                                      metrics.trend === 'up' ? 'text-green-600' : 
-                                      metrics.trend === 'down' ? 'text-red-600' : 'text-gray-500'
-                                    }`}>
-                                      {metrics.change > 0 ? '+' : ''}{metrics.change}%
-                                    </span>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-          </CardContent>
-        </Card>
-
-                {/* Top Queries Comparison */}
-                <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
-                      <Search className="h-5 w-5" />
-                      Top Queries Comparison
-                    </CardTitle>
-                    <CardDescription className="text-gray-600">
-                      All top performing queries across selected websites (click headers to sort)
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-gray-900 text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200 bg-gray-50/50">
-                            <SortableHeader field="site" className="text-left py-4 px-6 text-gray-700 font-semibold">
-                              Site
-                            </SortableHeader>
-                            <SortableHeader field="query" className="text-left py-4 px-6 text-gray-700 font-semibold">
-                              Query
-                            </SortableHeader>
-                            <SortableHeader field="clicks" className="text-right py-4 px-6 text-gray-700 font-semibold">
-                              Clicks
-                            </SortableHeader>
-                            <SortableHeader field="impressions" className="text-right py-4 px-6 text-gray-700 font-semibold">
-                              Impressions
-                            </SortableHeader>
-                            <SortableHeader field="ctr" className="text-right py-4 px-6 text-gray-700 font-semibold">
-                              CTR
-                            </SortableHeader>
-                            <SortableHeader field="position" className="text-right py-4 px-6 text-gray-700 font-semibold">
-                              Position
-                            </SortableHeader>
-                            <th className="text-left py-4 px-6 text-gray-700 font-semibold">Countries</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {getSortedQueries().map((query) => (
-                            <tr key={`${query.siteUrl}-${query.query}`} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                              <td className="py-4 px-6">
-                                <div className="flex items-center gap-3">
-                                  <div 
-                                    className="w-3 h-3 rounded-full" 
-                                    style={{ backgroundColor: getPerformanceColor(query.siteUrl) }}
-                                  />
-                                  <span className="font-medium">{query.siteName}</span>
-      </div>
-                              </td>
-                              <td 
-                                className="py-4 px-6 font-medium max-w-xs cursor-pointer hover:bg-blue-50 rounded transition-colors"
-                                onClick={() => setSelectedQuery({ query: query.query, siteUrl: query.siteUrl })}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="truncate text-blue-600 hover:text-blue-800">{query.query}</span>
-                                  {selectedCountry && (
-                                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs shrink-0">
-                                      <MapPin className="h-3 w-3 mr-1" />
-                                      {selectedCountry.toUpperCase()}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="text-right py-4 px-6 font-bold">
-                                {query.clicks.toLocaleString()}
-                              </td>
-                              <td className="text-right py-4 px-6">
-                                {query.impressions.toLocaleString()}
-                              </td>
-                              <td className="text-right py-4 px-6">
-                                {(query.ctr * 100).toFixed(1)}%
-                              </td>
-                              <td className="text-right py-4 px-6">
-                                {query.position.toFixed(1)}
-                              </td>
-                              <td className="py-4 px-6">
-                                <div className="flex flex-wrap gap-1">
-                                  {query.countries.map((country, countryIndex) => (
-                                    <Badge 
-                                      key={country.country}
-                                      variant="outline" 
-                                      className={`text-xs ${
-                                        countryIndex === 0 ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                        'bg-green-50 text-green-700 border-green-200'
-                                      }`}
-                                    >
-                                      <span className="mr-1">{country.flag}</span>
-                                      {country.name}
-                                    </Badge>
-                                  ))}
-                                  {query.countries.length > 2 && (
-                                    <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600">
-                                      +{query.countries.length - 2}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Device Breakdown Comparison */}
-                <Card className="border-0 shadow-sm bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-xl text-gray-900 flex items-center gap-3">
-                      <Smartphone className="h-5 w-5" />
-                      Device Performance Comparison
-                    </CardTitle>
-                    <CardDescription className="text-gray-600">
-                      Compare device performance across selected websites
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-gray-900">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-4 px-6 text-gray-700 font-semibold">Website</th>
-                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Desktop Clicks</th>
-                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Mobile Clicks</th>
-                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Tablet Clicks</th>
-                            <th className="text-right py-4 px-6 text-gray-700 font-semibold">Mobile %</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedWebsites.map((siteUrl) => {
-                            const metrics = websiteMetrics.find(w => w.siteUrl === siteUrl);
-                            if (!metrics) return null;
-                            
-                            const desktop = metrics.deviceBreakdown.find(d => d.device === 'desktop')?.clicks || 0;
-                            const mobile = metrics.deviceBreakdown.find(d => d.device === 'mobile')?.clicks || 0;
-                            const tablet = metrics.deviceBreakdown.find(d => d.device === 'tablet')?.clicks || 0;
-                            const total = desktop + mobile + tablet;
-                            const mobilePercent = total > 0 ? (mobile / total * 100).toFixed(1) : '0';
-                            
-                            return (
-                              <tr key={siteUrl} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                                <td className="py-4 px-6">
-                                  <div className="flex items-center gap-3">
-                                    <div 
-                                      className="w-3 h-3 rounded-full" 
-                                      style={{ backgroundColor: getPerformanceColor(siteUrl) }}
-                                    />
-                                    <span className="font-medium">{getSiteDisplayName(siteUrl)}</span>
-                                  </div>
-                                </td>
-                                <td className="text-right py-4 px-6 font-bold">
-                                  {desktop.toLocaleString()}
-                                </td>
-                                <td className="text-right py-4 px-6 font-bold">
-                                  {mobile.toLocaleString()}
-                                </td>
-                                <td className="text-right py-4 px-6 font-bold">
-                                  {tablet.toLocaleString()}
-                                </td>
-                                <td className="text-right py-4 px-6 font-bold">
-                                  {mobilePercent}%
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-          </CardContent>
-        </Card>
-              </>
-            )}
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           </>
         )}
                 </div>
@@ -1823,7 +1167,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                   className="flex items-center gap-2"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Back to {compareMode ? 'Comparison' : 'Dashboard'}
+                  Back to Comparison
                 </Button>
               </div>
             </div>
@@ -2096,6 +1440,94 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
           </div>
         </div>
       )}
+
+      <Dialog open={analyticsDialogOpen} onOpenChange={open => { setAnalyticsDialogOpen(open); if (!open) setAnalyticsDialogSite(null); }}>
+        <DialogContent className="max-w-2xl w-full bg-white">
+          <DialogHeader>
+            <DialogTitle>Аналитика сайта {analyticsDialogSite && getSiteDisplayName(analyticsDialogSite)}</DialogTitle>
+            <DialogDescription>Подробная статистика за последние 28 дней</DialogDescription>
+          </DialogHeader>
+          {analyticsDialogLoading ? (
+            <div className="py-8 text-center text-gray-500">Загрузка...</div>
+          ) : analyticsDialogData ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500">Клики</div>
+                  <div className="font-bold text-lg">{analyticsDialogData.totalClicks.toLocaleString()}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Показы</div>
+                  <div className="font-bold text-lg">{analyticsDialogData.totalImpressions.toLocaleString()}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">CTR</div>
+                  <div className="font-bold text-lg">{(analyticsDialogData.averageCtr * 100).toFixed(2)}%</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Позиция</div>
+                  <div className="font-bold text-lg">{analyticsDialogData.averagePosition.toFixed(1)}</div>
+                </div>
+              </div>
+              {/* Страны */}
+              <div>
+                <div className="font-semibold mb-2">Топ страны</div>
+                <div className="flex flex-wrap gap-2">
+                  {analyticsDialogData.countryBreakdown?.slice(0, 10).map((c: any) => (
+                    <Badge key={c.country} className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                      {getCountryFlag(c.country)} {getCountryName(c.country)} — {c.clicks}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              {/* Запросы */}
+              <div>
+                <div className="font-semibold mb-2">Топ запросы</div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead><tr><th>Запрос</th><th>Клики</th><th>Показы</th><th>CTR</th><th>Позиция</th></tr></thead>
+                    <tbody>
+                      {analyticsDialogData.topQueries?.map((q: any) => (
+                        <tr key={q.query}><td>{q.query}</td><td>{q.clicks}</td><td>{q.impressions}</td><td>{(q.ctr*100).toFixed(1)}%</td><td>{q.position.toFixed(1)}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {/* Страницы */}
+              <div>
+                <div className="font-semibold mb-2">Топ страницы</div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead><tr><th>Страница</th><th>Клики</th><th>Показы</th><th>CTR</th><th>Позиция</th></tr></thead>
+                    <tbody>
+                      {analyticsDialogData.topPages?.map((p: any) => (
+                        <tr key={p.page}><td className="max-w-[200px] truncate"><a href={p.page} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-violet-600 underline">{p.page}</a></td><td>{p.clicks}</td><td>{p.impressions}</td><td>{(p.ctr*100).toFixed(1)}%</td><td>{p.position.toFixed(1)}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {/* Устройства */}
+              <div>
+                <div className="font-semibold mb-2">Устройства</div>
+                <div className="flex flex-wrap gap-2">
+                  {analyticsDialogData.deviceBreakdown?.map((d: any) => (
+                    <Badge key={d.device} className="bg-gray-100 text-gray-700 border-gray-200 text-xs">
+                      {d.device}: {d.clicks} кликов, {d.impressions} показов, CTR {(d.ctr*100).toFixed(1)}%, поз. {d.position.toFixed(1)}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-gray-500">Нет данных</div>
+          )}
+          <DialogClose asChild>
+            <Button variant="outline" className="mt-6 w-full">Закрыть</Button>
+          </DialogClose>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
