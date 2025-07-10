@@ -472,23 +472,33 @@ export class SearchConsoleApi {
       position: 0,
     };
 
+    console.log(`getSiteMetricsWithDates for ${siteUrl}:`, {
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
+      country,
+      overallMetrics,
+      totalRows: overallResponse.rows?.length || 0
+    });
+
     // Get daily data
     const dailyQuery: SearchAnalyticsQuery = {
       startDate: formatDate(startDate),
       endDate: formatDate(endDate),
       dimensions: ['date'],
-      rowLimit: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+      rowLimit: 1000, // Увеличиваем лимит для больших диапазонов дат
       dimensionFilterGroups: dimensionFilterGroups.length > 0 ? dimensionFilterGroups : undefined,
     };
 
     const dailyResponse = await this.getSearchAnalytics(siteUrl, dailyQuery);
-    const dailyData = (dailyResponse.rows || []).map(row => ({
-      date: row.keys?.[0] || '',
-      clicks: row.clicks,
-      impressions: row.impressions,
-      ctr: row.ctr,
-      position: row.position,
-    }));
+    const dailyData = (dailyResponse.rows || [])
+      .map(row => ({
+        date: row.keys?.[0] || '',
+        clicks: row.clicks,
+        impressions: row.impressions,
+        ctr: row.ctr,
+        position: row.position,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date)); // Сортируем по дате
 
     // Get top queries
     const queriesQuery: SearchAnalyticsQuery = {

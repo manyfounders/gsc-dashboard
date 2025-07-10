@@ -415,13 +415,18 @@ export const useMultiAccountSearchConsole = (connectedAccounts: ConnectedAccount
     setError(null);
     
     try {
-      // Reload all website metrics
+      // Reload all website metrics with current date range
       const promises = sites.map(async site => {
         const api = apis.get(site.accountEmail);
         if (!api) return null;
         
         try {
-          const metrics = await api.getSiteMetrics(site.siteUrl, 28, selectedCountry || undefined);
+          const metrics = await api.getSiteMetricsWithDates(
+            site.siteUrl, 
+            dateRange.startDate, 
+            dateRange.endDate, 
+            selectedCountry || undefined
+          );
           const { trend, change } = calculateTrend(metrics.dailyData);
           return {
             siteUrl: site.siteUrl,
@@ -464,7 +469,7 @@ export const useMultiAccountSearchConsole = (connectedAccounts: ConnectedAccount
     } finally {
       setIsLoading(false);
     }
-  }, [apis, sites, selectedCountry, handleError]);
+  }, [apis, sites, selectedCountry, dateRange, handleError]);
 
   return {
     isLoading,

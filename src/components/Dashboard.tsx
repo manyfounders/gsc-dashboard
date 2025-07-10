@@ -134,6 +134,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
   const [analyticsDialogSite, setAnalyticsDialogSite] = useState<string | null>(null);
   const [analyticsDialogData, setAnalyticsDialogData] = useState<any>(null);
   const [analyticsDialogLoading, setAnalyticsDialogLoading] = useState(false);
+  
+  // Состояния для временных фильтров
+  const [tempDateRange, setTempDateRange] = useState(dateRange);
+  const [tempSelectedCountry, setTempSelectedCountry] = useState(selectedCountry);
 
   useEffect(() => {
     loadSites();
@@ -144,6 +148,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
       loadOverallAnalytics();
     }
   }, [sites, loadOverallAnalytics]);
+
+  // Синхронизация временных фильтров с основными
+  useEffect(() => {
+    setTempDateRange(dateRange);
+  }, [dateRange]);
+
+  useEffect(() => {
+    setTempSelectedCountry(selectedCountry);
+  }, [selectedCountry]);
 
   // Убираем автоматический выбор сайта, чтобы показывать общую аналитику
   // useEffect(() => {
@@ -173,18 +186,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
     }
   };
 
-  const handleCountryChange = (country: string) => {
-    const newCountry = country === 'all' ? null : country;
-    setSelectedCountry(newCountry);
+
+
+  const handleApplyFilters = async () => {
+    setDateRange(tempDateRange);
+    setSelectedCountry(tempSelectedCountry);
     
-    // Reload data with new country filter
-    loadOverallAnalytics();
+    // Обновляем метрики всех сайтов с новыми фильтрами
+    await refreshData();
   };
 
-  const handleDateRangeChange = (startDate: Date, endDate: Date) => {
-    setDateRange({ startDate, endDate });
-    
-    // Reload data with new date range
+  const handleResetFilters = () => {
+    const defaultDateRange = {
+      startDate: (() => {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 28);
+        return start;
+      })(),
+      endDate: new Date()
+    };
+    setTempDateRange(defaultDateRange);
+    setTempSelectedCountry(null);
+    setDateRange(defaultDateRange);
+    setSelectedCountry(null);
     loadOverallAnalytics();
   };
 
@@ -680,8 +705,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                   <span className="font-medium text-gray-900">Country:</span>
                 </div>
                 <Select 
-                  value={selectedCountry || 'all'} 
-                  onValueChange={handleCountryChange}
+                  value={tempSelectedCountry || 'all'} 
+                  onValueChange={(value) => setTempSelectedCountry(value === 'all' ? null : value)}
                 >
                   <SelectTrigger className="text-xs border-gray-200 w-full sm:w-auto">
                     <SelectValue placeholder="All Countries" />
@@ -698,9 +723,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                     ))}
                   </SelectContent>
                 </Select>
-                {selectedCountry && (
+                {tempSelectedCountry && (
                   <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
-                    Filtered by {selectedCountry.toUpperCase()}
+                    Filtered by {tempSelectedCountry.toUpperCase()}
                   </Badge>
                 )}
               </div>
@@ -717,12 +742,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                     <Input
                       id="start-date"
                       type="date"
-                      value={format(dateRange.startDate, 'yyyy-MM-dd')}
+                      value={format(tempDateRange.startDate, 'yyyy-MM-dd')}
                       onChange={(e) => {
                         const start = new Date(e.target.value);
-                        const end = dateRange.endDate;
+                        const end = tempDateRange.endDate;
                         if (start <= end) {
-                          handleDateRangeChange(start, end);
+                          setTempDateRange({ startDate: start, endDate: end });
                         }
                       }}
                       disabled={isLoading}
@@ -734,12 +759,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                     <Input
                       id="end-date"
                       type="date"
-                      value={format(dateRange.endDate, 'yyyy-MM-dd')}
+                      value={format(tempDateRange.endDate, 'yyyy-MM-dd')}
                       onChange={(e) => {
-                        const start = dateRange.startDate;
+                        const start = tempDateRange.startDate;
                         const end = new Date(e.target.value);
                         if (start <= end) {
-                          handleDateRangeChange(start, end);
+                          setTempDateRange({ startDate: start, endDate: end });
                         }
                       }}
                       disabled={isLoading}
@@ -756,11 +781,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                     else if (value === '14') start.setDate(end.getDate() - 14);
                     else if (value === '28') start.setDate(end.getDate() - 28);
                     else if (value === '90') start.setDate(end.getDate() - 90);
-                    handleDateRangeChange(start, end);
+                    setTempDateRange({ startDate: start, endDate: end });
                   }}
                   value={(() => {
                     const now = new Date();
-                    const diff = Math.round((now.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24));
+                    const diff = Math.round((now.getTime() - tempDateRange.startDate.getTime()) / (1000 * 60 * 60 * 24));
                     if (diff === 7) return '7';
                     if (diff === 14) return '14';
                     if (diff === 28) return '28';
@@ -779,6 +804,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            
+            {/* Кнопки Apply и Reset */}
+            <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-gray-200">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetFilters}
+                disabled={isLoading}
+                className="text-gray-600 border-gray-300 hover:bg-gray-50"
+              >
+                Reset
+              </Button>
+              <Button
+                onClick={handleApplyFilters}
+                disabled={isLoading}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Applying...
+                  </>
+                ) : (
+                  'Apply Filters'
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1471,7 +1523,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ apiKey, onDisconnect }) =>
                 <div className="flex flex-wrap gap-2">
                   {analyticsDialogData.countryBreakdown?.slice(0, 10).map((c: any) => (
                     <Badge key={c.country} className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                      {getCountryFlag(c.country)} {getCountryName(c.country)} — {c.clicks}
+                      {getCountryFlag(c.country)} {getCountryName(c.country)} — {c.clicks} кликов, {c.impressions} показов
                     </Badge>
                   ))}
                 </div>
