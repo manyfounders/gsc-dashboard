@@ -146,7 +146,7 @@ export const getCountryFlag = (countryCode: string): string => {
   return countryData[countryCode.toLowerCase()]?.flag || '🏳️';
 };
 
-export const useMultiAccountSearchConsole = (connectedAccounts: ConnectedAccount[] = []): UseMultiAccountSearchConsoleReturn => {
+export const useMultiAccountSearchConsole = (connectedAccounts: ConnectedAccount[] = [], userId?: string): UseMultiAccountSearchConsoleReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sites, setSites] = useState<ExtendedSiteInfo[]>([]);
@@ -164,16 +164,21 @@ export const useMultiAccountSearchConsole = (connectedAccounts: ConnectedAccount
 
   // Автоматически инициализируем API для всех подключенных аккаунтов
   useEffect(() => {
+    console.log('useMultiAccountSearchConsole: connectedAccounts changed:', connectedAccounts.length, 'accounts');
     const newApis = new Map<string, SearchConsoleApi>();
     
-    connectedAccounts.forEach(account => {
-      if (account.apiKey) {
-        console.log('useMultiAccountSearchConsole: initializing API for account:', account.email);
-        const searchConsoleApi = new SearchConsoleApi({ accessToken: account.apiKey });
-        newApis.set(account.email, searchConsoleApi);
-      }
-    });
+          connectedAccounts.forEach(account => {
+        if (account.apiKey) {
+          console.log('useMultiAccountSearchConsole: initializing API for account:', account.email);
+          console.log('useMultiAccountSearchConsole: token length:', account.apiKey.length);
+          const searchConsoleApi = new SearchConsoleApi({ accessToken: account.apiKey }, userId);
+          newApis.set(account.email, searchConsoleApi);
+        } else {
+          console.log('useMultiAccountSearchConsole: no API key for account:', account.email);
+        }
+      });
     
+    console.log('useMultiAccountSearchConsole: initialized', newApis.size, 'APIs');
     setApis(newApis);
   }, [connectedAccounts]);
 
@@ -229,6 +234,8 @@ export const useMultiAccountSearchConsole = (connectedAccounts: ConnectedAccount
   };
 
   const loadSites = useCallback(async () => {
+    console.log('loadSites: apis.size =', apis.size);
+    console.log('loadSites: apis keys =', Array.from(apis.keys()));
     if (apis.size === 0) {
       console.log('loadSites: no APIs available');
       return;
@@ -239,6 +246,7 @@ export const useMultiAccountSearchConsole = (connectedAccounts: ConnectedAccount
     
     try {
       console.log('loadSites: loading sites from', apis.size, 'accounts');
+      console.log('loadSites: connected accounts:', connectedAccounts.map(acc => ({ email: acc.email, hasToken: !!acc.apiKey })));
       
       // Загружаем сайты со всех аккаунтов
       const allSitesPromises = Array.from(apis.entries()).map(async ([email, api]) => {

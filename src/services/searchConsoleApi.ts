@@ -5,6 +5,7 @@ export interface SearchConsoleCredentials {
 export interface SiteInfo {
   siteUrl: string;
   permissionLevel: 'siteFullUser' | 'siteOwner' | 'siteRestrictedUser' | 'siteUnverifiedUser';
+  addedDate?: string; // Дата добавления сайта в консоль
 }
 
 export interface SearchAnalyticsQuery {
@@ -156,9 +157,11 @@ export class SearchConsoleApiError extends Error {
 export class SearchConsoleApi {
   private accessToken: string;
   private baseUrl = 'https://searchconsole.googleapis.com/webmasters/v3';
+  private userId?: string;
 
-  constructor(credentials: SearchConsoleCredentials) {
+  constructor(credentials: SearchConsoleCredentials, userId?: string) {
     this.accessToken = credentials.accessToken;
+    this.userId = userId;
   }
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -166,14 +169,19 @@ export class SearchConsoleApi {
     
     console.log('Making request to:', url);
     console.log('Request options:', JSON.stringify(options, null, 2));
+    console.log('Access token (first 10 chars):', this.accessToken.substring(0, 10) + '...');
     
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.accessToken}`,
+        'Accept': 'application/json',
         ...options.headers,
       },
+    }).catch(error => {
+      console.error('Fetch error details:', error);
+      throw new SearchConsoleApiError(`Network error: ${error.message}`, 0, 'NETWORK_ERROR');
     });
 
     console.log('Response status:', response.status);
@@ -184,11 +192,44 @@ export class SearchConsoleApi {
       console.log('Error response:', errorData);
       
       if (response.status === 401) {
-        throw new SearchConsoleApiError(
-          'Invalid access token. Please check your Google OAuth credentials.',
-          401,
-          'INVALID_ACCESS_TOKEN'
-        );
+        // Попробуем обновить токен
+        try {
+          console.log('Token expired, attempting to refresh...');
+          await this.refreshToken();
+          console.log('Token refreshed successfully, retrying request...');
+          
+          // Повторяем запрос с новым токеном
+          const retryResponse = await fetch(url, {
+            ...options,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.accessToken}`,
+              'Accept': 'application/json',
+              ...options.headers,
+            },
+          });
+          
+          if (!retryResponse.ok) {
+            const retryErrorData = await retryResponse.json().catch(() => ({}));
+            throw new SearchConsoleApiError(
+              retryErrorData.error?.message || `API request failed with status ${retryResponse.status}`,
+              retryResponse.status,
+              retryErrorData.error?.code
+            );
+          }
+          
+          const retryResponseData = await retryResponse.json();
+          console.log('Retry successful response data:', JSON.stringify(retryResponseData, null, 2));
+          return retryResponseData;
+          
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          throw new SearchConsoleApiError(
+            'Invalid access token and refresh failed. Please re-authenticate.',
+            401,
+            'INVALID_ACCESS_TOKEN'
+          );
+        }
       }
       
       if (response.status === 403) {
@@ -214,7 +255,9 @@ export class SearchConsoleApi {
       );
     }
 
-    return response.json();
+    const responseData = await response.json();
+    console.log('Successful response data:', JSON.stringify(responseData, null, 2));
+    return responseData;
   }
 
   async validateApiKey(): Promise<boolean> {
@@ -229,9 +272,40 @@ export class SearchConsoleApi {
     }
   }
 
+  async refreshToken(): Promise<string> {
+    if (!this.userId) {
+      throw new SearchConsoleApiError('User ID required for token refresh');
+    }
+
+    try {
+      const response = await fetch('https://us-central1-symmetric-flow-428315-r5.cloudfunctions.net/refreshToken', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: this.userId })
+      });
+
+      const data = await response.json();
+      if (!data.ok || !data.user?.access_token) {
+        throw new SearchConsoleApiError(data.error || 'Failed to refresh token');
+      }
+
+      this.accessToken = data.user.access_token;
+      return this.accessToken;
+    } catch (error) {
+      if (error instanceof SearchConsoleApiError) {
+        throw error;
+      }
+      throw new SearchConsoleApiError(`Token refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   async getSites(): Promise<SiteInfo[]> {
+    console.log('getSites: making request to /sites');
     const response = await this.makeRequest<{ siteEntry?: SiteInfo[] }>('/sites');
-    return response.siteEntry || [];
+    console.log('getSites: response:', response);
+    const sites = response.siteEntry || [];
+    console.log('getSites: returning', sites.length, 'sites');
+    return sites;
   }
 
   async getSearchAnalytics(

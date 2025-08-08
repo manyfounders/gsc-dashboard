@@ -11,6 +11,15 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+  
+  /* Глобальные переменные для скругления */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
 }
 
 * {
@@ -39,10 +48,12 @@ body {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-lg);
   }
   
   .card-hover {
     transition: all 0.3s ease;
+    border-radius: var(--radius-lg);
   }
   
   .card-hover:hover {
@@ -51,7 +62,7 @@ body {
   }
 
   .skeleton {
-    @apply animate-pulse bg-gray-200 rounded;
+    @apply animate-pulse bg-gray-200 rounded-lg;
   }
   
   .skeleton-text {
@@ -60,5 +71,18 @@ body {
   
   .skeleton-title {
     @apply skeleton h-6 w-3/4 mb-3;
+  }
+  
+  /* Глобальные стили для гладких углов */
+  .rounded-smooth {
+    border-radius: var(--radius-md);
+  }
+  
+  .rounded-smooth-lg {
+    border-radius: var(--radius-lg);
+  }
+  
+  .rounded-smooth-xl {
+    border-radius: var(--radius-xl);
   }
 }

@@ -1,0 +1,10 @@
+{
+  "name": "telegram-cloud-function",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "node-fetch": "^2.6.7",
+    "firebase-admin": "^11.10.1",
+    "googleapis": "^126.0.0"
+  }
+}
