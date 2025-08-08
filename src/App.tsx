@@ -5,12 +5,31 @@ import { auth, db } from './lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { LogOut, Shield, Settings, Menu, Search, Bell, MessageSquare, Table, ExternalLink, User, Plus, RefreshCw, Globe, X } from 'lucide-react';
 import './App.css';
+import { SearchProvider, useSearchContext } from '@/context/SearchContext';
+import { SearchResults } from '@/components/SearchResults';
 
-function App() {
+function SearchBar() {
+  const { query, setQuery } = useSearchContext();
+  return (
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+      <input
+        type="text"
+        placeholder="Search anything..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        className="pl-10 pr-4 py-2 w-80 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      />
+      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-slate-400">⌘F</span>
+      <SearchResults />
+    </div>
+  );
+}
+
+function AppInner() {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -363,15 +382,7 @@ function App() {
         <header className="bg-white border-b border-slate-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search anything..."
-                  className="pl-10 pr-4 py-2 w-80 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-slate-400">⌘F</span>
-              </div>
+              <SearchBar />
             </div>
             
             <div className="flex items-center space-x-4">
@@ -412,6 +423,14 @@ function App() {
         </main>
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <SearchProvider>
+      <AppInner />
+    </SearchProvider>
   );
 }
 

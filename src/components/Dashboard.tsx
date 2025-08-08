@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { TrendingUp, TrendingDown, Globe, RefreshCw, AlertCircle, Search, Smartphone, MapPin, CalendarDays, Plus, X, MessageSquare, ChevronUp, ChevronDown, User, ArrowLeft, Mouse, Eye, Target, Loader2, ArrowUp, ExternalLink, Filter } from 'lucide-react';
+import { TrendingUp, TrendingDown, Globe, RefreshCw, AlertCircle, Search, Smartphone, MapPin, CalendarDays, MessageSquare, ChevronUp, ChevronDown, ArrowLeft, Mouse, Eye, Target, Loader2, ArrowUp, ExternalLink, Filter } from 'lucide-react';
 import { useMultiAccountSearchConsole, getCountryFlag, getCountryName } from '../hooks/useMultiAccountSearchConsole';
 import { format } from 'date-fns';
 import { SiteCardSkeleton, LoadingSpinner } from './Skeleton';
@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { commentsService } from '../services/commentsService';
 import { db } from '../lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { useSearchContext } from '@/context/SearchContext';
 
 // Импортируем countryData из хука
 const countryData: Record<string, { name: string; flag: string }> = {
@@ -100,26 +101,26 @@ interface DashboardProps {
     displayName: string;
     avatar?: string | undefined;
   }>;
-  setConnectedAccounts: (accounts: Array<{
+  setConnectedAccounts: React.Dispatch<React.SetStateAction<Array<{
     email: string;
     apiKey: string;
     displayName: string;
     avatar?: string | undefined;
-  }>) => void;
+  }>>>;
   onRefreshData: () => void;
 }
 
-type ConnectedAccount = {
-  email: string;
-  apiKey: string;
-  displayName: string;
-  avatar?: string;
-};
+// type ConnectedAccount = {
+//   email: string;
+//   apiKey: string;
+//   displayName: string;
+//   avatar?: string;
+// };
 
 const GOOGLE_CLIENT_ID = '465841292980-s44el5p1ftjugodt7aebqnlj6qs8qre0.apps.googleusercontent.com';
 const GOOGLE_OAUTH_BACKEND = 'https://us-central1-symmetric-flow-428315-r5.cloudfunctions.net/oauthExchange';
 
-export const Dashboard: React.FC<DashboardProps> = ({ onDisconnect, user, settingsOpen, setSettingsOpen, activeTab, setActiveTab, connectedAccounts, setConnectedAccounts, onRefreshData }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ onDisconnect, user, settingsOpen, setSettingsOpen, activeTab, setActiveTab: _setActiveTab, connectedAccounts, setConnectedAccounts, onRefreshData: _onRefreshData }) => {
 
   const [selectedWebsites, setSelectedWebsites] = useState<string[]>([]);
   const [selectedQuery, setSelectedQuery] = useState<{ query: string; siteUrl: string } | null>(null);
@@ -193,6 +194,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onDisconnect, user, settin
     metric: string;
   } | null>(null);
 
+  // Получаем контекст поиска и отдаём индекс
+  const { setIndex } = useSearchContext();
+
   useEffect(() => {
     // Загружаем сайты только если есть подключенные аккаунты
     if (connectedAccounts.length > 0) {
@@ -206,6 +210,93 @@ export const Dashboard: React.FC<DashboardProps> = ({ onDisconnect, user, settin
       loadOverallAnalytics();
     }
   }, [sites, loadOverallAnalytics]);
+
+  // Собираем индекс для поиска при наличии данных
+  useEffect(() => {
+    try {
+      const sitesIndex = (websiteMetrics || []).map(w => ({
+        siteUrl: w.siteUrl,
+        clicks: w.totalClicks || 0,
+        impressions: w.totalImpressions || 0,
+        ctr: w.totalImpressions ? (w.totalClicks / w.totalImpressions) : 0,
+        position: w.averagePosition || 0,
+      }));
+
+      const queriesIndex = (websiteMetrics || []).flatMap(w => (w.topQueries || []).map((q: any) => ({
+        query: q.query,
+        clicks: q.clicks,
+        impressions: q.impressions,
+        ctr: q.ctr,
+        position: q.position,
+        siteUrl: w.siteUrl,
+      })));
+
+      const countriesIndex = (websiteMetrics || []).flatMap(w => (w.countryBreakdown || []).map((c: any) => ({
+        country: c.country,
+        countryName: getCountryName(c.country),
+        clicks: c.clicks,
+        impressions: c.impressions,
+        ctr: c.ctr,
+        position: c.position,
+      })));
+
+      const devicesIndex = (websiteMetrics || []).flatMap(w => (w.deviceBreakdown || []).map((d: any) => ({
+        device: d.device,
+        clicks: d.clicks,
+        impressions: d.impressions,
+        ctr: d.ctr,
+        position: d.position,
+        siteUrl: w.siteUrl,
+      })));
+
+      // Comments: агрегируем последние комментарии для индексации
+      const commentsIndex: Array<{ id: string; siteUrl: string; siteName: string; content: string }> = [];
+      // Пропускаем тяжелый запрос — index отрисуем из уже загруженных данных
+
+      const items = [
+        ...sitesIndex.map(s => ({
+          id: `site:${s.siteUrl}`,
+          type: 'site' as const,
+          title: s.siteUrl,
+          siteUrl: s.siteUrl,
+          metrics: { clicks: s.clicks, impressions: s.impressions, ctr: s.ctr, position: s.position },
+        })),
+        ...queriesIndex.map((q, i) => ({
+          id: `query:${q.siteUrl}:${q.query}:${i}`,
+          type: 'query' as const,
+          title: q.query,
+          subtitle: q.siteUrl,
+          siteUrl: q.siteUrl,
+          metrics: { clicks: q.clicks, impressions: q.impressions, ctr: q.ctr, position: q.position },
+        })),
+        ...countriesIndex.map((c) => ({
+          id: `country:${c.country}`,
+          type: 'country' as const,
+          title: getCountryName(c.country),
+          subtitle: c.country.toUpperCase(),
+          metrics: { clicks: c.clicks, impressions: c.impressions, ctr: c.ctr, position: c.position },
+        })),
+        ...devicesIndex.map((d, i) => ({
+          id: `device:${d.device}:${i}`,
+          type: 'device' as const,
+          title: d.device,
+          subtitle: d.siteUrl,
+          siteUrl: d.siteUrl,
+          metrics: { clicks: d.clicks, impressions: d.impressions, ctr: d.ctr, position: d.position },
+        })),
+        ...commentsIndex.map((c) => ({
+          id: `comment:${c.id}`,
+          type: 'comment' as const,
+          title: c.content,
+          subtitle: c.siteName,
+          siteUrl: c.siteUrl,
+        })),
+      ];
+      setIndex(items as any);
+    } catch (e) {
+      // no-op
+    }
+  }, [websiteMetrics, setIndex]);
 
   // Синхронизация временных фильтров с основными
   useEffect(() => {
@@ -259,6 +350,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ onDisconnect, user, settin
       }
     }
   };
+
+  // Обработка действий из глобального поиска
+  useEffect(() => {
+    const onAction = (e: any) => {
+      const item = e.detail;
+      if (!item) return;
+      if (item.type === 'site' && item.siteUrl) {
+        // Скролл к сайту и подсветка/открытие аналитики
+        setSelectedWebsites((prev) => Array.from(new Set([item.siteUrl, ...prev])));
+      }
+      if (item.type === 'query' && item.siteUrl && item.title) {
+        setSelectedQuery({ query: item.title, siteUrl: item.siteUrl });
+      }
+      if (item.type === 'country') {
+        setSelectedCountry(item.subtitle?.toLowerCase() || null);
+      }
+      if (item.type === 'device') {
+        // В перспективе — можно фильтровать по девайсу
+      }
+      if (item.type === 'comment' && item.siteUrl) {
+        setShowCommentsPanel(true);
+        setCommentsSiteUrl(item.siteUrl);
+      }
+    };
+    window.addEventListener('search:action', onAction);
+    return () => window.removeEventListener('search:action', onAction);
+  }, [setSelectedCountry]);
 
 
 
@@ -659,13 +777,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onDisconnect, user, settin
     return { trend: 'neutral', change: 0 };
   };
 
-  const handleRemoveAccount = (email: string) => {
-    if (connectedAccounts.length > 1) {
-      setConnectedAccounts((prev) => 
-        prev.filter((acc) => acc.email !== email)
-      );
-    }
-  };
+  // const handleRemoveAccount = (email: string) => {
+  //   if (connectedAccounts.length > 1) {
+  //     setConnectedAccounts((prev) => 
+  //       prev.filter((acc) => acc.email !== email)
+  //     );
+  //   }
+  // };
 
   useEffect(() => {
     if (user?.uid) {
@@ -2461,11 +2579,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onDisconnect, user, settin
                       mobile: '📱',
                       tablet: '📱'
                     };
-                    const deviceColors = {
-                      desktop: 'bg-blue-50 border-blue-200 text-blue-700',
-                      mobile: 'bg-green-50 border-green-200 text-green-700',
-                      tablet: 'bg-purple-50 border-purple-200 text-purple-700'
-                    };
+                    // const deviceColors = {
+                    //   desktop: 'bg-blue-50 border-blue-200 text-blue-700',
+                    //   mobile: 'bg-green-50 border-green-200 text-green-700',
+                    //   tablet: 'bg-purple-50 border-purple-200 text-purple-700'
+                    // };
                     
                     return (
                       <div key={d.device} className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
