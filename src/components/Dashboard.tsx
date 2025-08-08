@@ -2360,7 +2360,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onDisconnect, user, settin
                         <div className="border-t border-gray-100 pt-2">
                           <div className="text-xs text-gray-500 mb-2">Топ стран:</div>
                           <div className="space-y-1">
-                            {chartTooltip.data.countryBreakdown.slice(0, 3).map((country: any, index: number) => (
+                              {chartTooltip.data.countryBreakdown.slice(0, 3).map((country: any) => (
                               <div key={country.country} className="flex items-center justify-between text-xs">
                                 <div className="flex items-center gap-2">
                                   <span className="text-lg">{getCountryFlag(country.country)}</span>
@@ -2417,7 +2417,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onDisconnect, user, settin
                     </Badge>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {analyticsDialogData.countryBreakdown?.slice(0, 12).map((c: any, index: number) => (
+                  {analyticsDialogData.countryBreakdown?.slice(0, 12).map((c: any) => (
                     <div key={c.country} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
                       <div className="flex items-center gap-3">
                         <Badge className="text-lg">
